@@ -1,0 +1,45 @@
+# ==== Dipendenze ====
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# ==== Build Angular ====
+/dist
+/tmp
+/out-tsc
+/bazel-out
+.angular/cache
+/.angular
+
+# ==== Ambiente / segreti ====
+# I file environment contengono URL e chiave Supabase: fuori dal repo.
+# In repo tieni solo environment.example.ts con i segnaposto.
+/src/environments/environment.ts
+/src/environments/environment.development.ts
+/src/environments/environment.prod.ts
+.env
+.env.*
+!.env.example
+*.js
+
+# ==== IDE / editor ====
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# ==== Sistema operativo ====
+.DS_Store
+Thumbs.db
+
+# ==== Log e vari ====
+*.log
+/coverage
+/.nyc_output
+
+# ==== Claude ====
+.claude
+CLAUDE.md
+/supabase/schema.sql

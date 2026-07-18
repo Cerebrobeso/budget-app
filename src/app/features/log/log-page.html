@@ -1,0 +1,137 @@
+<!-- Timbro del mese: il saldo come split di gara -->
+<section hlmCard class="mb-4 overflow-hidden">
+  <div class="flex items-center justify-between border-b border-border px-4 py-3">
+    <button hlmBtn variant="ghost" size="icon" aria-label="Mese precedente" (click)="shiftMonth(-1)">←</button>
+    <div class="text-center">
+      <div class="font-display text-3xl font-extrabold tracking-tight leading-none">
+        {{ monthStamp() }}
+      </div>
+      <div class="text-xs uppercase tracking-widest text-muted-foreground">{{ monthLong() }} {{ year() }}</div>
+    </div>
+    <button hlmBtn variant="ghost" size="icon" aria-label="Mese successivo" (click)="shiftMonth(1)">→</button>
+  </div>
+  <div class="grid grid-cols-3 divide-x divide-border text-center">
+    <div class="px-2 py-3">
+      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Entrate</div>
+      <div class="figure text-base md:text-lg font-semibold text-income">{{ fmt(totIncome()) }}</div>
+    </div>
+    <div class="px-2 py-3">
+      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Uscite</div>
+      <div class="figure text-base md:text-lg font-semibold text-expense">{{ fmt(totExpense()) }}</div>
+    </div>
+    <div class="px-2 py-3" [class.bg-income-soft]="balance() >= 0" [class.bg-expense-soft]="balance() < 0">
+      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Saldo</div>
+      <div class="figure text-base md:text-lg font-bold"
+           [class.text-income]="balance() >= 0" [class.text-expense]="balance() < 0">
+        {{ fmtSigned(balance()) }}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Filtri categoria / sottocategoria -->
+<div class="mb-4 grid grid-cols-2 gap-2">
+  <div hlmSelect [value]="filterCategory()" (valueChange)="onFilterCategory($event)" [itemToString]="categoryLabel">
+    <label hlmLabel class="sr-only" for="filter-category">Filtra per categoria</label>
+    <hlm-select-trigger buttonId="filter-category">
+      <span hlmSelectValue placeholder="Tutte le categorie"></span>
+    </hlm-select-trigger>
+    <hlm-select-content *hlmSelectPortal>
+      <hlm-select-item value="__all__">Tutte le categorie</hlm-select-item>
+      @for (cat of catStore.active(); track cat.id) {
+        <hlm-select-item [value]="cat.id">
+          <span class="mr-2 inline-block size-2.5 rounded-full" [style.background]="cat.color"></span>
+          {{ cat.name }}
+        </hlm-select-item>
+      }
+    </hlm-select-content>
+  </div>
+  <div hlmSelect [value]="filterSub()" (valueChange)="onFilterSub($event)" [disabled]="filterCategory() === '__all__'" [itemToString]="subcategoryLabel">
+    <label hlmLabel class="sr-only" for="filter-subcategory">Filtra per sottocategoria</label>
+    <hlm-select-trigger buttonId="filter-subcategory">
+      <span hlmSelectValue placeholder="Tutte le sottocategorie"></span>
+    </hlm-select-trigger>
+    <hlm-select-content *hlmSelectPortal>
+      <hlm-select-item value="__all__">Tutte le sottocategorie</hlm-select-item>
+      @for (sub of filterSubs(); track sub.id) {
+        <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
+      }
+    </hlm-select-content>
+  </div>
+</div>
+
+<!-- Lista movimenti raggruppata per giorno -->
+@if (groups().length === 0) {
+  <div hlmCard class="p-8 text-center text-muted-foreground">
+    Nessun movimento in questo mese.<br />
+    Premi <kbd class="figure rounded bg-muted px-1.5">N</kbd> o il tasto + per aggiungerne uno.
+  </div>
+}
+@for (group of groups(); track group.date) {
+  <div class="mb-1 mt-4 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    {{ group.label }}
+  </div>
+  <div hlmCard class="divide-y divide-border">
+    @for (tx of group.items; track tx.id) {
+      <div class="flex items-center gap-3 px-4 py-3">
+        <span class="size-2.5 shrink-0 rounded-full" [style.background]="catStore.color(tx.categoryId)"
+              [attr.aria-hidden]="true"></span>
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-sm font-medium">
+            {{ tx.description || catStore.label(tx.categoryId, tx.subcategoryId) }}
+          </div>
+          <div class="truncate text-xs text-muted-foreground">
+            {{ catStore.label(tx.categoryId, tx.subcategoryId) }}
+          </div>
+        </div>
+        <div class="figure shrink-0 text-sm font-semibold"
+             [class.text-income]="tx.type === 'income'" [class.text-expense]="tx.type === 'expense'">
+          {{ tx.type === 'income' ? '+' : '−' }}{{ fmt(tx.amount) }}
+        </div>
+        <div class="flex shrink-0 gap-1">
+          <button hlmBtn variant="ghost" size="icon" class="!h-8 !w-8"
+                  [attr.aria-label]="'Modifica ' + (tx.description || 'movimento')"
+                  (click)="startEdit(tx)">✎</button>
+          <button hlmBtn variant="ghost" size="icon" class="!h-8 !w-8 text-expense"
+                  [attr.aria-label]="'Elimina ' + (tx.description || 'movimento')"
+                  (click)="askDelete(tx)">🗑</button>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Dialog modifica -->
+<brn-dialog #editDialog="brnDialog" closeDelay="100">
+  <div hlmDialogOverlay class="hidden registro-backdrop fixed inset-0"></div>
+  <hlm-dialog-content
+    *brnDialogContent
+    class="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
+           w-full md:max-w-lg max-h-[92dvh] overflow-y-auto !rounded-t-3xl !rounded-b-none md:!rounded-3xl"
+  >
+    <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Modifica movimento</h2>
+    <app-transaction-form [transaction]="editing()" (saved)="editDialog.close({})" />
+  </hlm-dialog-content>
+</brn-dialog>
+
+<!-- Dialog conferma eliminazione -->
+<brn-dialog #deleteDialog="brnDialog" closeDelay="100">
+  <div hlmDialogOverlay class="hidden registro-backdrop fixed inset-0"></div>
+  <hlm-dialog-content
+    *brnDialogContent
+    class="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
+           w-full md:max-w-sm max-h-[92dvh] overflow-y-auto !rounded-t-3xl !rounded-b-none md:!rounded-3xl"
+  >
+    <h2 hlmDialogTitle class="mb-2 text-xl font-display font-bold">Eliminare il movimento?</h2>
+    @if (deleting(); as tx) {
+      <p class="mb-4 text-sm text-muted-foreground">
+        {{ tx.description || catStore.label(tx.categoryId, tx.subcategoryId) }} ·
+        <span class="figure">{{ fmt(tx.amount) }}</span> del {{ tx.date }}
+      </p>
+    }
+    <div class="flex justify-end gap-2">
+      <button hlmDialogClose hlmBtn variant="outline">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="confirmDelete()">Elimina</button>
+    </div>
+  </hlm-dialog-content>
+</brn-dialog>

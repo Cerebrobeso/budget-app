@@ -1,0 +1,49 @@
+<h1 class="mb-4 font-display text-2xl font-extrabold">Grafici</h1>
+
+<!-- Selettore intervallo -->
+<div hlmCard class="mb-4 p-3">
+  <div class="flex flex-wrap items-center gap-2">
+    @for (preset of presets; track preset.id) {
+      <button hlmBtn size="sm" [variant]="range() === preset.id ? 'default' : 'outline'"
+              (click)="setPreset(preset.id)">{{ preset.label }}</button>
+    }
+  </div>
+  @if (range() === 'custom') {
+    <div class="mt-3 grid grid-cols-2 gap-3">
+      <div>
+        <label hlmLabel for="from">Dal</label>
+        <input hlmInput id="from" type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+      </div>
+      <div>
+        <label hlmLabel for="to">Al</label>
+        <input hlmInput id="to" type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+      </div>
+    </div>
+  }
+  <p class="figure mt-2 text-xs text-muted-foreground">{{ from() }} → {{ to() }}</p>
+</div>
+
+<!-- Entrate vs uscite per mese -->
+<section hlmCard class="mb-4 p-4">
+  <h2 class="mb-1 font-display text-lg font-bold">Entrate vs uscite</h2>
+  <p class="mb-2 text-xs text-muted-foreground">Totali mensili nel periodo selezionato</p>
+  <div echarts [options]="barOptions()" class="h-72 w-full"></div>
+</section>
+
+<!-- Distribuzione uscite per categoria -->
+<section hlmCard class="mb-4 p-4">
+  <h2 class="mb-1 font-display text-lg font-bold">Uscite per categoria</h2>
+  <p class="mb-2 text-xs text-muted-foreground">Distribuzione nel periodo selezionato</p>
+  @if (donutTotal() > 0) {
+    <div echarts [options]="donutOptions()" class="h-80 w-full"></div>
+  } @else {
+    <p class="py-8 text-center text-sm text-muted-foreground">Nessuna uscita nel periodo.</p>
+  }
+</section>
+
+<!-- Trend saldo netto -->
+<section hlmCard class="mb-4 p-4">
+  <h2 class="mb-1 font-display text-lg font-bold">Saldo netto nel tempo</h2>
+  <p class="mb-2 text-xs text-muted-foreground">Entrate − uscite, mese per mese, con cumulato</p>
+  <div echarts [options]="trendOptions()" class="h-72 w-full"></div>
+</section>

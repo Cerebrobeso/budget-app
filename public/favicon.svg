@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #10151a; }
+        .fg { fill: #eef0ea; }
+        .accent { fill: #8296ff; }
+      }
+    </style>
+  </defs>
+  <rect class="bg" width="64" height="64" rx="14" fill="#f7f6f2"/>
+  <path class="fg" fill="#141a17"
+    d="M20 15h13.6c6.4 0 10.8 3.7 10.8 9.6 0 4.3-2.4 7.4-6.3 8.7L45 49h-8.1l-6-13.7H27V49h-7V15Zm7 6.1v8.3h6c3 0 4.8-1.6 4.8-4.2 0-2.6-1.8-4.1-4.8-4.1h-6Z"/>
+  <circle class="accent" cx="48" cy="46" r="4.2" fill="#2e46d1"/>
+</svg>
