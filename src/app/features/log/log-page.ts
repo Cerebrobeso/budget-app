@@ -1,12 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronLeft, lucideChevronRight, lucidePencil, lucideTrash2 } from '@ng-icons/lucide';
-import { Transaction } from '../../core/models';
+import { lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTrash2, lucideX } from '@ng-icons/lucide';
+import { Transaction, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { MONTHS_LONG, MONTHS_SHORT, eur, eurSigned, formatDayLabel } from '../../core/format';
+import { downloadFile, toCsv } from '../../core/export';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
 import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
+import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { TransactionForm } from './transaction-form';
@@ -22,8 +25,10 @@ interface DayGroup {
   selector: 'app-log-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    FormsModule,
     HlmButton,
     HlmCard,
+    HlmInput,
     HlmLabel,
     NgIcon,
     TransactionForm,
@@ -31,7 +36,9 @@ interface DayGroup {
     ...HlmSelectImports,
     DatePipe
   ],
-  providers: [provideIcons({ lucideChevronLeft, lucideChevronRight, lucidePencil, lucideTrash2 })],
+  providers: [
+    provideIcons({ lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTrash2, lucideX }),
+  ],
   templateUrl: './log-page.html',
   styleUrl: './log-page.css',
 })
@@ -44,6 +51,8 @@ export class LogPage {
   readonly month = signal(this.now.getMonth() + 1);
   readonly filterCategory = signal('__all__');
   readonly filterSub = signal('__all__');
+  /** Testo di ricerca sulla descrizione: se valorizzato, cerca in tutti i mesi (non solo quello aperto). */
+  readonly search = signal('');
 
   readonly editing = signal<Transaction | null>(null);
   readonly deleting = signal<Transaction | null>(null);
@@ -60,8 +69,13 @@ export class LogPage {
     return catId === '__all__' ? [] : this.catStore.activeSubs(catId);
   });
 
+  /** Con una ricerca attiva si guarda in tutti i mesi, altrimenti solo in quello aperto. */
+  readonly searching = computed(() => this.search().trim().length > 0);
+
   readonly filtered = computed(() => {
-    let items = this.txStore.byMonth(this.year(), this.month());
+    const term = this.search().trim().toLowerCase();
+    let items = term ? this.txStore.sorted() : this.txStore.byMonth(this.year(), this.month());
+    if (term) items = items.filter((t) => t.description.toLowerCase().includes(term));
     const cat = this.filterCategory();
     if (cat !== '__all__') {
       items = items.filter((t) => t.categoryId === cat);
@@ -135,4 +149,20 @@ export class LogPage {
 
   protected readonly fmt = eur;
   protected readonly fmtSigned = eurSigned;
+
+  /** Esporta i movimenti attualmente visibili (con ricerca/filtri applicati) in CSV. */
+  exportCsv(): void {
+    const header = ['Data', 'Tipo', 'Categoria', 'Sottocategoria', 'Descrizione', 'Importo'];
+    const rows = this.filtered().map((t) => [
+      t.date,
+      t.type === 'income' ? 'Entrata' : 'Uscita',
+      this.catStore.byId(t.categoryId)?.name ?? t.categoryId,
+      t.subcategoryId
+        ? (this.catStore.byId(t.categoryId)?.subcategories.find((s) => s.id === t.subcategoryId)?.name ?? '')
+        : '',
+      t.description,
+      t.amount.toFixed(2).replace('.', ','),
+    ]);
+    downloadFile(toCsv([header, ...rows]), `registro-movimenti-${todayIso()}.csv`, 'text/csv;charset=utf-8;');
+  }
 }

@@ -33,8 +33,30 @@
   </div>
 </section>
 
+<!-- Ricerca ed export -->
+<div class="mb-3 mt-8 flex gap-2">
+  <div class="relative flex-1">
+    <ng-icon name="lucideSearch" size="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+    <label hlmLabel class="sr-only" for="search">Cerca movimenti</label>
+    <input hlmInput id="search" type="text" placeholder="Cerca per descrizione, in tutti i mesi…"
+           class="pl-9" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    @if (search()) {
+      <button hlmBtn variant="ghost" size="icon" class="absolute right-1 top-1/2 !size-7 -translate-y-1/2"
+              aria-label="Cancella ricerca" (click)="search.set('')">
+        <ng-icon name="lucideX" size="14" />
+      </button>
+    }
+  </div>
+  <button hlmBtn variant="outline" size="icon" aria-label="Esporta CSV" (click)="exportCsv()">
+    <ng-icon name="lucideDownload" size="16" />
+  </button>
+</div>
+@if (searching()) {
+  <p class="mb-4 text-xs text-muted-foreground">Risultati in tutti i mesi per "{{ search() }}".</p>
+}
+
 <!-- Filtri categoria / sottocategoria -->
-<div class="mb-4 mt-8 flex gap-2">
+<div class="mb-4 flex gap-2">
   <div hlmSelect [value]="filterCategory()" (valueChange)="onFilterCategory($event)" [itemToString]="categoryLabel">
     <label hlmLabel class="sr-only" for="filter-category">Filtra per categoria</label>
     <hlm-select-trigger buttonId="filter-category">
