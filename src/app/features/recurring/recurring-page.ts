@@ -106,7 +106,7 @@ export class RecurringPage {
 
   subcategoryName(rule: RecurringRule): string | null {
     if (!rule.subcategoryId) return null;
-    return this.catStore.byId(rule.categoryId)?.subcategories.find((s) => s.id === rule.subcategoryId)?.name ?? null;
+    return this.catStore.subName(rule.categoryId, rule.subcategoryId) ?? null;
   }
 
   progress(rule: RecurringRule): { index: number; total: number } | null {

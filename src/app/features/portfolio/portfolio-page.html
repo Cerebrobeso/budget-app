@@ -116,8 +116,9 @@
 <hlm-dialog #assetDialog="hlmDialog" [overlayClass]="'hidden registro-backdrop fixed inset-0'" closeDelay="100">
   <hlm-dialog-content
     *hlmDialogPortal
-    class="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
-           md:max-w-lg max-h-[92dvh] overflow-y-auto !rounded-t-3xl !rounded-b-none md:!rounded-3xl"
+    class="fixed inset-0 h-dvh w-dvw max-h-none rounded-none overflow-y-auto
+           md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:w-full md:-translate-x-1/2 md:-translate-y-1/2
+           md:max-w-lg md:max-h-[92dvh] md:!rounded-3xl"
   >
     <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Nuova posizione</h2>
     <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); saveAsset()">
@@ -162,8 +163,9 @@
 <hlm-dialog #snapDialog="hlmDialog" [overlayClass]="'hidden registro-backdrop fixed inset-0'" closeDelay="100">
   <hlm-dialog-content
     *hlmDialogPortal
-    class="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
-           md:max-w-sm max-h-[92dvh] overflow-y-auto !rounded-t-3xl !rounded-b-none md:!rounded-3xl"
+    class="fixed inset-0 h-dvh w-dvw max-h-none rounded-none overflow-y-auto
+           md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:w-full md:-translate-x-1/2 md:-translate-y-1/2
+           md:max-w-sm md:max-h-[92dvh] md:!rounded-3xl"
   >
     <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Snapshot — {{ snapAsset()?.name }}</h2>
     <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); saveSnapshot()">

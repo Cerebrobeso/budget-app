@@ -44,6 +44,20 @@ export interface Subcategory {
   id: string;
   name: string;
   archived?: boolean;
+  /** Aggiunta dall'utente su una categoria predefinita/condivisa: privata, la vede solo lui (client-side, non persistita). */
+  overlay?: boolean;
+}
+
+/**
+ * Sottocategoria che un utente aggiunge a una categoria condivisa (`Category.shared`).
+ * Vive in una tabella a parte, sempre privata (RLS owner-only): non tocca mai la riga
+ * jsonb condivisa, così non interferisce con gli altri utenti.
+ */
+export interface SubcategoryOverlay {
+  id: string;
+  categoryId: string;
+  name: string;
+  archived?: boolean;
 }
 
 export interface Category {
@@ -54,6 +68,14 @@ export interface Category {
   color: string;
   archived?: boolean;
   subcategories: Subcategory[];
+  /**
+   * Categoria di default, condivisa in lettura con tutti gli utenti (RLS lato db).
+   * Sola lettura lato app: rinominarla/archiviarla/ricolorarla va fatto a mano nel
+   * db (chi la possiede resta l'utente originale), altrimenti la scrittura verrebbe
+   * scartata silenziosamente dalla policy RLS. Le categorie create da un utente
+   * restano invece private a lui (`shared` assente/false).
+   */
+  shared?: boolean;
 }
 
 export type AssetCategory =

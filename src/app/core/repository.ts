@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import { Asset, Category, RecurringRule, Transaction } from './models';
+import { Asset, Category, RecurringRule, SubcategoryOverlay, Transaction } from './models';
 
 /**
  * Contratto di persistenza. Le scritture sono granulari (add/update/remove)
@@ -16,6 +16,12 @@ export interface BudgetRepository {
   loadCategories(): Promise<Category[] | null>;
   addCategory(category: Category): Promise<void>;
   updateCategory(id: string, patch: Partial<Omit<Category, 'id'>>): Promise<void>;
+  removeCategory(id: string): Promise<void>;
+
+  /** Sottocategorie che un utente aggiunge a una categoria condivisa: private, mai nella jsonb condivisa. */
+  loadSubcategoryOverlays(): Promise<SubcategoryOverlay[] | null>;
+  addSubcategoryOverlay(overlay: SubcategoryOverlay): Promise<void>;
+  updateSubcategoryOverlay(id: string, patch: Partial<Omit<SubcategoryOverlay, 'id'>>): Promise<void>;
 
   loadAssets(): Promise<Asset[] | null>;
   addAsset(asset: Asset): Promise<void>;
@@ -33,6 +39,7 @@ const KEYS = {
   categories: 'registro.categories.v1',
   assets: 'registro.assets.v1',
   recurringRules: 'registro.recurringRules.v1',
+  subcategoryOverlays: 'registro.subcategoryOverlays.v1',
 } as const;
 
 /** Implementazione locale, usata solo se BUDGET_REPOSITORY non viene sovrascritto altrove. */
@@ -76,6 +83,22 @@ export class LocalStorageBudgetRepository implements BudgetRepository {
   async updateCategory(id: string, patch: Partial<Omit<Category, 'id'>>): Promise<void> {
     const items = this.read<Category[]>(KEYS.categories) ?? [];
     this.write(KEYS.categories, items.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  }
+  async removeCategory(id: string): Promise<void> {
+    const items = this.read<Category[]>(KEYS.categories) ?? [];
+    this.write(KEYS.categories, items.filter((c) => c.id !== id));
+  }
+
+  async loadSubcategoryOverlays(): Promise<SubcategoryOverlay[] | null> {
+    return this.read<SubcategoryOverlay[]>(KEYS.subcategoryOverlays) ?? [];
+  }
+  async addSubcategoryOverlay(overlay: SubcategoryOverlay): Promise<void> {
+    const items = this.read<SubcategoryOverlay[]>(KEYS.subcategoryOverlays) ?? [];
+    this.write(KEYS.subcategoryOverlays, [...items, overlay]);
+  }
+  async updateSubcategoryOverlay(id: string, patch: Partial<Omit<SubcategoryOverlay, 'id'>>): Promise<void> {
+    const items = this.read<SubcategoryOverlay[]>(KEYS.subcategoryOverlays) ?? [];
+    this.write(KEYS.subcategoryOverlays, items.map((o) => (o.id === id ? { ...o, ...patch } : o)));
   }
 
   async loadAssets(): Promise<Asset[] | null> {

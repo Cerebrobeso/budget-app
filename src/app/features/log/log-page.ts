@@ -157,9 +157,7 @@ export class LogPage {
       t.date,
       t.type === 'income' ? 'Entrata' : 'Uscita',
       this.catStore.byId(t.categoryId)?.name ?? t.categoryId,
-      t.subcategoryId
-        ? (this.catStore.byId(t.categoryId)?.subcategories.find((s) => s.id === t.subcategoryId)?.name ?? '')
-        : '',
+      t.subcategoryId ? (this.catStore.subName(t.categoryId, t.subcategoryId) ?? '') : '',
       t.description,
       t.amount.toFixed(2).replace('.', ','),
     ]);

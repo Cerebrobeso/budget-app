@@ -39,7 +39,7 @@ export class DashboardPage {
     { id: 'custom', label: 'Personalizzato' },
   ];
 
-  readonly range = signal<RangePreset>('12m');
+  readonly range = signal<RangePreset>('ytd');
   readonly customFrom = signal(isoShift(5));
   readonly customTo = signal(todayIso());
 
@@ -177,7 +177,7 @@ export class DashboardPage {
         name:
           subId === '__none__'
             ? 'Senza sottocategoria'
-            : (category?.subcategories.find((s) => s.id === subId)?.name ?? subId),
+            : (this.catStore.subName(categoryId, subId) ?? subId),
         value: round2(value),
         itemStyle: { color: tint(baseColor, i * 0.14) },
       }));

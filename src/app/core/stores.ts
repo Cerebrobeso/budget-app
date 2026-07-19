@@ -3,7 +3,17 @@ import type { User } from '@supabase/supabase-js';
 import { toast } from '@spartan-ng/brain/sonner';
 import { AuthService } from './auth.service';
 import { isoToDate } from './format';
-import { Asset, AssetSnapshot, Category, RecurringRule, Subcategory, Transaction, todayIso, uid } from './models';
+import {
+  Asset,
+  AssetSnapshot,
+  Category,
+  RecurringRule,
+  Subcategory,
+  SubcategoryOverlay,
+  Transaction,
+  todayIso,
+  uid,
+} from './models';
 import { BUDGET_REPOSITORY } from './repository';
 
 /** Annulla l'update ottimistico e avvisa l'utente se la scrittura remota fallisce. */
@@ -18,6 +28,8 @@ export class CategoryStore {
   private readonly repo = inject(BUDGET_REPOSITORY);
   private readonly auth = inject(AuthService);
   readonly categories = signal<Category[]>([]);
+  /** Sottocategorie che gli utenti aggiungono a categorie condivise: private, mai nella jsonb condivisa. */
+  readonly subcategoryOverlays = signal<SubcategoryOverlay[]>([]);
   readonly ready = signal(false);
 
   readonly active = computed(() => this.categories().filter((c) => !c.archived));
@@ -37,11 +49,13 @@ export class CategoryStore {
     this.ready.set(false);
     if (!user) {
       this.categories.set([]);
+      this.subcategoryOverlays.set([]);
       this.ready.set(true);
       return;
     }
-    const stored = await this.repo.loadCategories();
+    const [stored, overlays] = await Promise.all([this.repo.loadCategories(), this.repo.loadSubcategoryOverlays()]);
     this.categories.set(stored ?? []);
+    this.subcategoryOverlays.set(overlays ?? []);
     this.ready.set(true);
   }
 
@@ -49,10 +63,23 @@ export class CategoryStore {
     return this.categories().find((c) => c.id === id);
   }
 
+  /** Sottocategorie di una categoria: quelle proprie + quelle che l'utente ha aggiunto se condivisa. */
+  allSubs(categoryId: string): Subcategory[] {
+    const baked = this.byId(categoryId)?.subcategories ?? [];
+    const overlays: Subcategory[] = this.subcategoryOverlays()
+      .filter((o) => o.categoryId === categoryId)
+      .map((o) => ({ id: o.id, name: o.name, archived: o.archived, overlay: true }));
+    return [...baked, ...overlays];
+  }
+
+  subName(categoryId: string, subId: string): string | undefined {
+    return this.allSubs(categoryId).find((s) => s.id === subId)?.name;
+  }
+
   label(categoryId: string, subcategoryId: string | null): string {
     const cat = this.byId(categoryId);
     if (!cat) return categoryId;
-    const sub = subcategoryId ? cat.subcategories.find((s) => s.id === subcategoryId) : undefined;
+    const sub = subcategoryId ? this.allSubs(categoryId).find((s) => s.id === subcategoryId) : undefined;
     return sub ? `${cat.name} · ${sub.name}` : cat.name;
   }
 
@@ -72,28 +99,72 @@ export class CategoryStore {
     this.patch(id, () => ({ name }));
   }
 
+  setColor(id: string, color: string): void {
+    this.patch(id, () => ({ color }));
+  }
+
+  removeCategory(id: string): void {
+    const removed = this.byId(id);
+    this.categories.update((list) => list.filter((c) => c.id !== id));
+    this.repo.removeCategory(id).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (removed) this.categories.update((list) => [...list, removed]);
+      }),
+    );
+  }
+
   setArchived(id: string, archived: boolean): void {
     this.patch(id, () => ({ archived }));
   }
 
   addSubcategory(categoryId: string, name: string): void {
+    const cat = this.byId(categoryId);
+    if (!cat) return;
+    if (cat.shared) {
+      const overlay: SubcategoryOverlay = { id: uid(), categoryId, name };
+      this.subcategoryOverlays.update((list) => [...list, overlay]);
+      this.repo.addSubcategoryOverlay(overlay).catch((err) =>
+        reportWriteFailure(err, () => this.subcategoryOverlays.update((list) => list.filter((o) => o.id !== overlay.id))),
+      );
+      return;
+    }
     this.patch(categoryId, (c) => ({ subcategories: [...c.subcategories, { id: uid(), name }] }));
   }
 
   renameSubcategory(categoryId: string, subId: string, name: string): void {
+    if (this.subcategoryOverlays().some((o) => o.id === subId)) {
+      this.patchOverlay(subId, () => ({ name }));
+      return;
+    }
     this.patch(categoryId, (c) => ({
       subcategories: c.subcategories.map((s) => (s.id === subId ? { ...s, name } : s)),
     }));
   }
 
   setSubArchived(categoryId: string, subId: string, archived: boolean): void {
+    if (this.subcategoryOverlays().some((o) => o.id === subId)) {
+      this.patchOverlay(subId, () => ({ archived }));
+      return;
+    }
     this.patch(categoryId, (c) => ({
       subcategories: c.subcategories.map((s) => (s.id === subId ? { ...s, archived } : s)),
     }));
   }
 
   activeSubs(categoryId: string): Subcategory[] {
-    return (this.byId(categoryId)?.subcategories ?? []).filter((s) => !s.archived);
+    return this.allSubs(categoryId).filter((s) => !s.archived);
+  }
+
+  /** Categoria "Altro" del tipo indicato, usata come ripiego per i movimenti orfani: la crea se manca ancora. */
+  ensureFallbackCategory(kind: 'expense' | 'income'): Category {
+    const existing = this.active().find((c) => c.kind === kind && c.name.trim().toLowerCase() === 'altro');
+    if (existing) return existing;
+    const cat: Category = { id: uid(), name: 'Altro', kind, color: '#6B6F68', subcategories: [] };
+    this.categories.update((list) => [...list, cat]);
+    this.repo.addCategory(cat).catch((err) =>
+      reportWriteFailure(err, () => this.categories.update((list) => list.filter((c) => c.id !== cat.id))),
+    );
+    return cat;
   }
 
   private patch(id: string, fn: (c: Category) => Partial<Category>): void {
@@ -103,6 +174,16 @@ export class CategoryStore {
     this.categories.update((list) => list.map((c) => (c.id === id ? { ...c, ...partial } : c)));
     this.repo.updateCategory(id, partial).catch((err) =>
       reportWriteFailure(err, () => this.categories.update((list) => list.map((c) => (c.id === id ? current : c)))),
+    );
+  }
+
+  private patchOverlay(id: string, fn: (o: SubcategoryOverlay) => Partial<SubcategoryOverlay>): void {
+    const current = this.subcategoryOverlays().find((o) => o.id === id);
+    if (!current) return;
+    const partial = fn(current);
+    this.subcategoryOverlays.update((list) => list.map((o) => (o.id === id ? { ...o, ...partial } : o)));
+    this.repo.updateSubcategoryOverlay(id, partial).catch((err) =>
+      reportWriteFailure(err, () => this.subcategoryOverlays.update((list) => list.map((o) => (o.id === id ? current : o)))),
     );
   }
 }
@@ -165,6 +246,13 @@ export class TransactionStore {
         if (removed) this.transactions.update((list) => [...list, removed]);
       }),
     );
+  }
+
+  /** Sposta in blocco tutti i movimenti di una categoria su un'altra (la sottocategoria non si trasferisce). */
+  reassignCategory(fromCategoryId: string, toCategoryId: string): void {
+    for (const tx of this.transactions().filter((t) => t.categoryId === fromCategoryId)) {
+      this.update(tx.id, { categoryId: toCategoryId, subcategoryId: null });
+    }
   }
 
   /** Movimenti di un mese: month è 1-based. */

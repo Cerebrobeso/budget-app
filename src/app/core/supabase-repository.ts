@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Asset, Category, RecurringRule, Transaction } from './models';
+import { Asset, Category, RecurringRule, SubcategoryOverlay, Transaction } from './models';
 import { BudgetRepository } from './repository';
 import { supabase } from './supabase.client';
 
@@ -111,6 +111,7 @@ function rowToCat(row: any): Category {
     color: row.color,
     archived: row.archived ?? undefined,
     subcategories: row.subcategories ?? [],
+    shared: row.is_shared ?? false,
   };
 }
 function catPatchToRow(patch: Partial<Omit<Category, 'id'>>): Record<string, unknown> {
@@ -120,6 +121,30 @@ function catPatchToRow(patch: Partial<Omit<Category, 'id'>>): Record<string, unk
   if (patch.color !== undefined) row['color'] = patch.color;
   if (patch.archived !== undefined) row['archived'] = patch.archived;
   if (patch.subcategories !== undefined) row['subcategories'] = patch.subcategories;
+  return row;
+}
+
+function overlayToRow(overlay: SubcategoryOverlay) {
+  return {
+    id: overlay.id,
+    category_id: overlay.categoryId,
+    name: overlay.name,
+    archived: overlay.archived ?? false,
+  };
+}
+function rowToOverlay(row: any): SubcategoryOverlay {
+  return {
+    id: row.id,
+    categoryId: row.category_id,
+    name: row.name,
+    archived: row.archived ?? undefined,
+  };
+}
+function overlayPatchToRow(patch: Partial<Omit<SubcategoryOverlay, 'id'>>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (patch.categoryId !== undefined) row['category_id'] = patch.categoryId;
+  if (patch.name !== undefined) row['name'] = patch.name;
+  if (patch.archived !== undefined) row['archived'] = patch.archived;
   return row;
 }
 
@@ -183,6 +208,21 @@ export class SupabaseBudgetRepository implements BudgetRepository {
   }
   async updateCategory(id: string, patch: Partial<Omit<Category, 'id'>>): Promise<void> {
     await checkWrite(supabase.from('categories').update(catPatchToRow(patch)).eq('id', id));
+  }
+  async removeCategory(id: string): Promise<void> {
+    await checkWrite(supabase.from('categories').delete().eq('id', id));
+  }
+
+  async loadSubcategoryOverlays(): Promise<SubcategoryOverlay[] | null> {
+    const { data, error } = await supabase.from('subcategory_overlays').select('*');
+    if (error || !data) return null;
+    return data.map(rowToOverlay);
+  }
+  async addSubcategoryOverlay(overlay: SubcategoryOverlay): Promise<void> {
+    await checkWrite(supabase.from('subcategory_overlays').insert(overlayToRow(overlay)));
+  }
+  async updateSubcategoryOverlay(id: string, patch: Partial<Omit<SubcategoryOverlay, 'id'>>): Promise<void> {
+    await checkWrite(supabase.from('subcategory_overlays').update(overlayPatchToRow(patch)).eq('id', id));
   }
 
   async loadAssets(): Promise<Asset[] | null> {
