@@ -33,13 +33,16 @@ jobs:
         run: npm ci
 
       # Genera gli environment dai Secrets: le chiavi non sono nel repo,
-      # vengono iniettate qui, solo per la durata della build.
+      # vengono iniettate qui, solo per la durata della build. La versione
+      # viene letta da package.json, cosi' non va tenuta in sync a mano.
       - name: Genera environment
         run: |
+          VERSION=$(node -p "require('./package.json').version")
           mkdir -p src/environments
           cat > src/environments/environment.ts <<EOF
           export const environment = {
             production: false,
+            appVersion: '${VERSION}',
             supabaseUrl: '${{ secrets.SUPABASE_URL }}',
             supabaseAnonKey: '${{ secrets.SUPABASE_ANON_KEY }}',
           };
@@ -47,6 +50,7 @@ jobs:
           cat > src/environments/environment.production.ts <<EOF
           export const environment = {
             production: true,
+            appVersion: '${VERSION}',
             supabaseUrl: '${{ secrets.SUPABASE_URL }}',
             supabaseAnonKey: '${{ secrets.SUPABASE_ANON_KEY }}',
           };

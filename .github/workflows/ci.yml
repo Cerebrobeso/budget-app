@@ -26,10 +26,12 @@ jobs:
       # modulo esista con la forma giusta perché ng build/tsc compilino.
       - name: Genera environment placeholder
         run: |
+          VERSION=$(node -p "require('./package.json').version")
           mkdir -p src/environments
           cat > src/environments/environment.ts <<EOF
           export const environment = {
             production: true,
+            appVersion: '${VERSION}',
             supabaseUrl: 'https://placeholder.supabase.co',
             supabaseAnonKey: 'placeholder-anon-key',
           };

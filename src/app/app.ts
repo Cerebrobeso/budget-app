@@ -27,6 +27,7 @@ import {
 import { AuthService } from './core/auth.service';
 import { downloadFile } from './core/export';
 import { todayIso } from './core/models';
+import { environment } from '../environments/environment';
 import { CategoryStore, PortfolioStore, RecurringStore, ThemeService, TransactionStore } from './core/stores';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
@@ -66,6 +67,7 @@ import { TransactionForm } from './features/log/transaction-form';
   styleUrl: './app.css',
 })
 export class App {
+  protected readonly appVersion = environment.appVersion;
   protected readonly theme = inject(ThemeService);
   protected readonly auth = inject(AuthService);
   private readonly categoryStore = inject(CategoryStore);
