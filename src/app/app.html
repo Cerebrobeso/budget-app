@@ -1,4 +1,13 @@
-@if (auth.user()) {
+@if (!auth.ready()) {
+  <div class="flex min-h-dvh items-center justify-center">
+    <hlm-spinner class="!text-[length:2rem] text-muted-foreground" aria-label="Accesso in corso" />
+  </div>
+} @else if (auth.user()) {
+  @if (navigating()) {
+    <div class="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden bg-primary/15">
+      <div class="route-progress-bar h-full w-1/3 rounded-full bg-primary"></div>
+    </div>
+  }
   <div class="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-4 pb-24 md:pb-8">
     <header class="flex items-center justify-between py-4">
       <a routerLink="/movimenti" class="font-display text-2xl font-extrabold tracking-tight">
@@ -16,17 +25,25 @@
         </nav>
         <button hlmBtn variant="outline" size="icon" (click)="theme.toggle()"
                 [attr.aria-label]="theme.dark() ? 'Passa al tema chiaro' : 'Passa al tema scuro'">
-          @if (theme.dark()) { ☀️ } @else { 🌙 }
+          @if (theme.dark()) { <ng-icon name="lucideSun" /> } @else { <ng-icon name="lucideMoon" /> }
         </button>
-        <button hlmBtn variant="outline" size="icon" (click)="logout()" aria-label="Esci">⏻</button>
+        <button hlmBtn variant="outline" size="icon" (click)="logout()" aria-label="Esci"><ng-icon name="lucideLogOut" /></button>
         <button hlmBtn class="hidden md:inline-flex font-semibold" (click)="openQuickAdd()">
-          + Nuovo <kbd class="figure ml-1 rounded bg-black/15 px-1.5 text-xs">N</kbd>
+          <ng-icon name="lucidePlus" class="mr-1" /> Nuovo <kbd class="figure ml-1 rounded bg-black/15 px-1.5 text-xs">N</kbd>
         </button>
       </div>
     </header>
 
     <main class="flex-1">
-      <router-outlet />
+      @if (dataReady()) {
+        <div [class.route-fade-a]="routeAnimToggle()" [class.route-fade-b]="!routeAnimToggle()">
+          <router-outlet (activate)="onRouteActivate()" />
+        </div>
+      } @else {
+        <div class="flex items-center justify-center py-24">
+          <hlm-spinner class="!text-[length:2rem] text-muted-foreground" aria-label="Caricamento dati" />
+        </div>
+      }
     </main>
   </div>
 
@@ -42,7 +59,7 @@
         routerLinkActive="!text-primary font-bold"
         class="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] font-medium text-muted-foreground"
       >
-        <span class="text-lg leading-none" aria-hidden="true">{{ link.icon }}</span>
+        <ng-icon [name]="link.icon" size="20" aria-hidden="true" />
         {{ link.label }}
       </a>
     }
@@ -52,23 +69,18 @@
   <button
     hlmBtn
     size="icon"
-    class="fixed bottom-20 right-4 z-40 !h-14 !w-14 !rounded-full text-2xl shadow-xl shadow-primary/30 md:hidden"
+    class="fixed bottom-20 right-4 z-40 shadow-xl shadow-primary/30 md:hidden"
     aria-label="Aggiungi movimento"
     (click)="openQuickAdd()"
-  >+</button>
+  ><ng-icon name="lucidePlus" /></button>
 
   <!-- Dialog inserimento rapido, disponibile ovunque -->
-  <brn-dialog #quickAdd="brnDialog" closeDelay="100">
-    <div hlmDialogOverlay class="hidden registro-backdrop fixed inset-0"></div>
-    <hlm-dialog-content
-      *brnDialogContent
-      class="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
-             w-full md:max-w-lg max-h-[92dvh] overflow-y-auto !rounded-t-3xl !rounded-b-none md:!rounded-3xl"
-    >
+  <hlm-dialog #quickAdd="hlmDialog" closeDelay="100">
+    <hlm-dialog-content *hlmDialogPortal>
       <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Nuovo movimento</h2>
       <app-transaction-form (saved)="quickAdd.close({})" />
     </hlm-dialog-content>
-  </brn-dialog>
+  </hlm-dialog>
 } @else {
   <router-outlet />
 }

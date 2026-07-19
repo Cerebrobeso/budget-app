@@ -1,12 +1,12 @@
 <h1 class="mb-4 font-display text-2xl font-extrabold">Categorie</h1>
 
-<div brnTabs="attive" class="mb-4">
-  <div brnTabsList class="mb-4 inline-flex rounded-full border border-border bg-surface p-1" aria-label="Stato categorie">
-    <button brnTabsTrigger="attive" class="rounded-full px-4 py-1.5 text-sm font-medium data-[state=active]:bg-foreground data-[state=active]:text-background">Attive</button>
-    <button brnTabsTrigger="archiviate" class="rounded-full px-4 py-1.5 text-sm font-medium data-[state=active]:bg-foreground data-[state=active]:text-background">Archiviate</button>
+<div hlmTabs tab="attive" class="mb-4">
+  <div hlmTabsList class="mb-4 rounded-full border border-border bg-surface p-1" aria-label="Stato categorie">
+    <button hlmTabsTrigger="attive" class="rounded-full">Attive</button>
+    <button hlmTabsTrigger="archiviate" class="rounded-full">Archiviate</button>
   </div>
 
-  <div brnTabsContent="attive">
+  <div hlmTabsContent="attive">
     <!-- Nuova categoria -->
     <div hlmCard class="mb-4 p-4">
       <div class="flex flex-wrap items-end gap-3">
@@ -21,8 +21,8 @@
                  [ngModel]="newColor()" (ngModelChange)="newColor.set($event)" />
         </div>
         <div class="flex gap-2">
-          <button hlmBtn variant="outline" (click)="add('income')" [disabled]="!newName().trim()">+ Entrata</button>
-          <button hlmBtn (click)="add('expense')" [disabled]="!newName().trim()">+ Uscita</button>
+          <button hlmBtn variant="outline" (click)="add('income')" [disabled]="!newName().trim()"><ng-icon name="lucidePlus" class="mr-1" size="14" /> Entrata</button>
+          <button hlmBtn (click)="add('expense')" [disabled]="!newName().trim()"><ng-icon name="lucidePlus" class="mr-1" size="14" /> Uscita</button>
         </div>
       </div>
     </div>
@@ -57,9 +57,9 @@
                 } @else {
                   {{ sub.name }}
                   <button class="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
-                          [attr.aria-label]="'Rinomina ' + sub.name" (click)="startEditSub(cat, sub)">✎</button>
+                          [attr.aria-label]="'Rinomina ' + sub.name" (click)="startEditSub(cat, sub)"><ng-icon name="lucidePencil" size="13" /></button>
                   <button class="cursor-pointer text-muted-foreground hover:text-expense"
-                          [attr.aria-label]="'Archivia ' + sub.name" (click)="store.setSubArchived(cat.id, sub.id, true)">✕</button>
+                          [attr.aria-label]="'Archivia ' + sub.name" (click)="store.setSubArchived(cat.id, sub.id, true)"><ng-icon name="lucideX" size="13" /></button>
                 }
               </li>
             }
@@ -80,7 +80,7 @@
     }
   </div>
 
-  <div brnTabsContent="archiviate">
+  <div hlmTabsContent="archiviate">
     @if (archived().length === 0) {
       <div hlmCard class="p-8 text-center text-muted-foreground">Nessuna categoria archiviata.</div>
     }

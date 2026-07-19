@@ -7,21 +7,20 @@
         hlmInput
         id="tx-amount"
         name="amount"
-        type="number"
+        type="text"
         inputmode="decimal"
-        step="0.01"
-        min="0"
+        [maskito]="amountMask"
         required
         autocomplete="off"
         placeholder="0,00"
-        class="figure !h-16 !text-3xl font-semibold pr-12 text-right"
+        class="figure font-semibold pr-10 text-right"
         [class.!text-income]="type() === 'income'"
         [class.!text-expense]="type() === 'expense'"
-        [ngModel]="amount()"
-        (ngModelChange)="amount.set($event)"
+        [ngModel]="amountText()"
+        (ngModelChange)="amountText.set($event)"
         #amountInput
       />
-      <span class="figure absolute right-4 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">€</span>
+      <span class="figure absolute right-3 top-1/2 -translate-y-1/2 text-base text-muted-foreground">€</span>
     </div>
   </div>
 
@@ -31,7 +30,10 @@
       type="button"
       hlmBtn
       variant="outline"
-      [class]="type() === 'expense' ? 'bg-expense hover:bg-expense text-white border-transparent hover:opacity-90' : ''"
+      [attr.aria-pressed]="type() === 'expense'"
+      [class]="type() === 'expense'
+        ? 'transition-all bg-expense hover:bg-expense text-white border-transparent hover:opacity-90 ring-2 ring-expense/50 ring-offset-2 ring-offset-background shadow-md shadow-expense/30'
+        : 'transition-all opacity-60 hover:opacity-100'"
       (click)="setType('expense')"
     >
       Uscita
@@ -40,7 +42,10 @@
       type="button"
       hlmBtn
       variant="outline"
-      [class]="type() === 'income' ? 'bg-income hover:bg-income text-white border-transparent hover:opacity-90' : ''"
+      [attr.aria-pressed]="type() === 'income'"
+      [class]="type() === 'income'
+        ? 'transition-all bg-income hover:bg-income text-white border-transparent hover:opacity-90 ring-2 ring-income/50 ring-offset-2 ring-offset-background shadow-md shadow-income/30'
+        : 'transition-all opacity-60 hover:opacity-100'"
       (click)="setType('income')"
     >
       Entrata
@@ -51,7 +56,7 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <div>
       <label hlmLabel for="tx-category">Categoria</label>
-      <div hlmSelect [value]="categoryId()" (valueChange)="onCategoryChange($event)" [itemToString]="categoryLabel">
+      <div hlmSelect [value]="categoryId()" (valueChange)="onCategoryChange($event)" [disabled]="type() === null" [itemToString]="categoryLabel">
         <hlm-select-trigger buttonId="tx-category" class="w-full">
           <span hlmSelectValue placeholder="Scegli categoria"></span>
         </hlm-select-trigger>
@@ -67,7 +72,7 @@
     </div>
     <div>
       <label hlmLabel for="tx-subcategory">Sottocategoria</label>
-      <div hlmSelect [value]="subcategoryId()" (valueChange)="onSubChange($event)" [disabled]="subs().length === 0" [itemToString]="subcategoryLabel">
+      <div hlmSelect [value]="subcategoryId()" (valueChange)="onSubChange($event)" [disabled]="type() === null || subs().length === 0" [itemToString]="subcategoryLabel">
         <hlm-select-trigger buttonId="tx-subcategory" class="w-full">
           <span hlmSelectValue placeholder="—"></span>
         </hlm-select-trigger>
@@ -84,13 +89,15 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <div>
       <label hlmLabel for="tx-date">Data</label>
-      <input hlmInput id="tx-date" name="date" type="date" required
-             [ngModel]="date()" (ngModelChange)="date.set($event)" />
+      <hlm-date-picker class="w-full" [date]="dateValue()" [disabled]="type() === null" (dateChange)="onDateChange($event)">
+        <hlm-date-picker-trigger buttonId="tx-date" class="w-full" />
+      </hlm-date-picker>
     </div>
     <div>
       <label hlmLabel for="tx-desc">Descrizione <span class="normal-case font-normal">(opzionale)</span></label>
       <input hlmInput id="tx-desc" name="description" type="text" autocomplete="off"
              placeholder="Es. Spesa, benzina…"
+             [disabled]="type() === null"
              [ngModel]="description()" (ngModelChange)="description.set($event)" />
     </div>
   </div>

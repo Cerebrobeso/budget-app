@@ -1,17 +1,20 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BrnTabs, BrnTabsContent, BrnTabsList, BrnTabsTrigger } from '@spartan-ng/brain/tabs';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucidePencil, lucidePlus, lucideX } from '@ng-icons/lucide';
 import { Category, Subcategory } from '../../core/models';
 import { CategoryStore } from '../../core/stores';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
 import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmTabsImports } from '@spartan-ng/helm/tabs';
 
 @Component({
   selector: 'app-categories-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, HlmButton, HlmCard, HlmInput, HlmBadge, BrnTabs, BrnTabsList, BrnTabsTrigger, BrnTabsContent],
+  imports: [FormsModule, HlmButton, HlmCard, HlmInput, HlmBadge, NgIcon, ...HlmTabsImports],
+  providers: [provideIcons({ lucidePencil, lucidePlus, lucideX })],
   templateUrl: './categories-page.html',
   styleUrl: './categories-page.css',
 })

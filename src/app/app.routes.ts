@@ -32,5 +32,9 @@ export const routes: Routes = [
     loadComponent: () => import('./features/portfolio/portfolio-page').then((m) => m.PortfolioPage),
     title: 'Patrimonio — Registro',
   },
-  { path: '**', redirectTo: 'movimenti' },
+  {
+    path: '**',
+    loadComponent: () => import('./features/not-found/not-found-page').then((m) => m.NotFoundPage),
+    title: 'Pagina non trovata — Registro',
+  },
 ];

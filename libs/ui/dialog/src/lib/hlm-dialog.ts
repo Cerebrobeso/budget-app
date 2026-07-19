@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, forwardRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, forwardRef, input } from '@angular/core';
 import { BrnDialog, provideBrnDialogDefaultOptions } from '@spartan-ng/brain/dialog';
+import type { ClassValue } from 'clsx';
 import { HlmDialogOverlay } from './hlm-dialog-overlay';
 
 @Component({
@@ -17,8 +18,11 @@ import { HlmDialogOverlay } from './hlm-dialog-overlay';
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
-		<hlm-dialog-overlay />
+		<hlm-dialog-overlay [class]="overlayClass()" />
 		<ng-content />
 	`,
 })
-export class HlmDialog extends BrnDialog {}
+export class HlmDialog extends BrnDialog {
+	/** Extra classes applied to this dialog's overlay, e.g. for a custom backdrop tint. */
+	public readonly overlayClass = input<ClassValue>('');
+}

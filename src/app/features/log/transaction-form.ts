@@ -9,9 +9,12 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MaskitoDirective } from '@maskito/angular';
 import { Transaction, TransactionType, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
+import { AMOUNT_MASK, dateToIso, isoToDate, parseAmountMask, stringifyAmountMask } from '../../core/format';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
@@ -24,7 +27,7 @@ import { HlmSelectImports } from '@spartan-ng/helm/select';
 @Component({
   selector: 'app-transaction-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, HlmButton, HlmInput, HlmLabel, ...HlmSelectImports],
+  imports: [FormsModule, MaskitoDirective, HlmButton, HlmInput, HlmLabel, ...HlmSelectImports, ...HlmDatePickerImports],
   templateUrl: './transaction-form.html',
   styleUrl: './transaction-form.css',
 })
@@ -36,8 +39,12 @@ export class TransactionForm {
   readonly transaction = input<Transaction | null>(null);
   readonly saved = output<void>();
 
-  readonly amount = signal<number | null>(null);
-  readonly type = signal<TransactionType>('expense');
+  /** Testo del campo importo, formattato dalla maschera Maskito (punto delle migliaia, virgola decimale). */
+  readonly amountText = signal<string>('');
+  readonly amount = computed<number | null>(() => parseAmountMask(this.amountText()));
+  protected readonly amountMask = AMOUNT_MASK;
+  /** Nullo finché l'utente non sceglie Entrata/Uscita: gli input successivi restano disabilitati. */
+  readonly type = signal<TransactionType | null>(null);
   readonly categoryId = signal<string>('spesa-quotidiana');
   readonly subcategoryId = signal<string | null>(null);
   readonly date = signal<string>(todayIso());
@@ -46,9 +53,17 @@ export class TransactionForm {
 
   readonly editing = computed(() => this.transaction() !== null);
 
-  readonly availableCategories = computed(() =>
-    this.type() === 'income' ? this.catStore.incomeCategories() : this.catStore.expenseCategories(),
-  );
+  readonly dateValue = computed(() => isoToDate(this.date()));
+
+  onDateChange(value: Date | null): void {
+    if (value) this.date.set(dateToIso(value));
+  }
+
+  readonly availableCategories = computed(() => {
+    const type = this.type();
+    if (!type) return [];
+    return type === 'income' ? this.catStore.incomeCategories() : this.catStore.expenseCategories();
+  });
 
   readonly subs = computed(() => {
     // dipende dalle categorie per aggiornarsi se cambiano
@@ -60,7 +75,7 @@ export class TransactionForm {
     effect(() => {
       const tx = this.transaction();
       if (tx) {
-        this.amount.set(tx.amount);
+        this.amountText.set(stringifyAmountMask(tx.amount));
         this.type.set(tx.type);
         this.categoryId.set(tx.categoryId);
         this.subcategoryId.set(tx.subcategoryId);
@@ -97,6 +112,11 @@ export class TransactionForm {
     this.subs().find((s) => s.id === id)?.name ?? id;
 
   save(): void {
+    const type = this.type();
+    if (!type) {
+      this.error.set('Seleziona Entrata o Uscita.');
+      return;
+    }
     const amount = Number(this.amount());
     if (!amount || amount <= 0) {
       this.error.set('Inserisci un importo maggiore di zero.');
@@ -109,7 +129,7 @@ export class TransactionForm {
     this.error.set('');
     const payload = {
       amount: Math.round(amount * 100) / 100,
-      type: this.type(),
+      type,
       categoryId: this.categoryId(),
       subcategoryId: this.subcategoryId(),
       date: this.date(),
@@ -121,7 +141,7 @@ export class TransactionForm {
     } else {
       this.txStore.add(payload);
       // pronto per il movimento successivo
-      this.amount.set(null);
+      this.amountText.set('');
       this.description.set('');
     }
     this.saved.emit();

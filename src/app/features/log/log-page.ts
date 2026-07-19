@@ -1,14 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
-import { BrnDialog, BrnDialogContent } from '@spartan-ng/brain/dialog';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronLeft, lucideChevronRight, lucidePencil, lucideTrash2 } from '@ng-icons/lucide';
 import { Transaction } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { MONTHS_LONG, MONTHS_SHORT, eur, eurSigned, formatDayLabel } from '../../core/format';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
-import { HlmDialogContent, HlmDialogOverlay, HlmDialogTitle, HlmDialogClose } from '@spartan-ng/helm/dialog';
+import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { TransactionForm } from './transaction-form';
+import {DatePipe} from '@angular/common';
 
 interface DayGroup {
   date: string;
@@ -23,15 +25,13 @@ interface DayGroup {
     HlmButton,
     HlmCard,
     HlmLabel,
+    NgIcon,
     TransactionForm,
-    BrnDialog,
-    BrnDialogContent,
-    HlmDialogOverlay,
-    HlmDialogContent,
-    HlmDialogTitle,
-    HlmDialogClose,
+    ...HlmDialogImports,
     ...HlmSelectImports,
+    DatePipe
   ],
+  providers: [provideIcons({ lucideChevronLeft, lucideChevronRight, lucidePencil, lucideTrash2 })],
   templateUrl: './log-page.html',
   styleUrl: './log-page.css',
 })
@@ -48,8 +48,8 @@ export class LogPage {
   readonly editing = signal<Transaction | null>(null);
   readonly deleting = signal<Transaction | null>(null);
 
-  private readonly editDialog = viewChild.required<BrnDialog>('editDialog');
-  private readonly deleteDialog = viewChild.required<BrnDialog>('deleteDialog');
+  private readonly editDialog = viewChild.required<HlmDialog>('editDialog');
+  private readonly deleteDialog = viewChild.required<HlmDialog>('deleteDialog');
 
   readonly monthStamp = computed(() => MONTHS_SHORT[this.month() - 1]);
   readonly monthLong = computed(() => MONTHS_LONG[this.month() - 1]);

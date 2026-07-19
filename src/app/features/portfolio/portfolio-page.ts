@@ -2,14 +2,16 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild
 import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import type { EChartsCoreOption } from 'echarts';
-import { BrnDialog, BrnDialogContent } from '@spartan-ng/brain/dialog';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucidePlus, lucideX } from '@ng-icons/lucide';
 import { ASSET_CATEGORY_LABEL, Asset, AssetCategory, todayIso } from '../../core/models';
 import { PortfolioStore, ThemeService, latest, returnPct } from '../../core/stores';
-import { eur, pct } from '../../core/format';
+import { dateToIso, eur, formatDateItalian, isoToDate, pct } from '../../core/format';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
-import { HlmDialogContent, HlmDialogOverlay, HlmDialogTitle } from '@spartan-ng/helm/dialog';
+import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
+import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
@@ -25,13 +27,12 @@ import { HlmSelectImports } from '@spartan-ng/helm/select';
     HlmInput,
     HlmLabel,
     HlmBadge,
-    BrnDialog,
-    BrnDialogContent,
-    HlmDialogOverlay,
-    HlmDialogContent,
-    HlmDialogTitle,
+    NgIcon,
+    ...HlmDialogImports,
     ...HlmSelectImports,
+    ...HlmDatePickerImports,
   ],
+  providers: [provideIcons({ lucidePlus, lucideX })],
   templateUrl: './portfolio-page.html',
   styleUrl: './portfolio-page.css',
 })
@@ -42,8 +43,8 @@ export class PortfolioPage {
   protected readonly assetCategories = (Object.entries(ASSET_CATEGORY_LABEL) as [AssetCategory, string][])
     .map(([id, label]) => ({ id, label }));
 
-  private readonly assetDialog = viewChild.required<BrnDialog>('assetDialog');
-  private readonly snapDialog = viewChild.required<BrnDialog>('snapDialog');
+  private readonly assetDialog = viewChild.required<HlmDialog>('assetDialog');
+  private readonly snapDialog = viewChild.required<HlmDialog>('snapDialog');
 
   readonly from = signal(`${new Date().getFullYear()}-01-01`);
   readonly to = signal(todayIso());
@@ -63,7 +64,30 @@ export class PortfolioPage {
 
   readonly archivedAssets = computed(() => this.store.assets().filter((a) => a.archived));
 
+  readonly fromDate = computed(() => isoToDate(this.from()));
+  readonly toDate = computed(() => isoToDate(this.to()));
+  readonly assetDateValue = computed(() => isoToDate(this.assetDate()));
+  readonly snapDateValue = computed(() => isoToDate(this.snapDate()));
+
+  onFromChange(value: Date | null): void {
+    if (value) this.from.set(dateToIso(value));
+  }
+
+  onToChange(value: Date | null): void {
+    if (value) this.to.set(dateToIso(value));
+  }
+
+  onAssetDateChange(value: Date | null): void {
+    if (value) this.assetDate.set(dateToIso(value));
+  }
+
+  onSnapDateChange(value: Date | null): void {
+    if (value) this.snapDate.set(dateToIso(value));
+  }
+
   readonly totalReturn = computed(() => returnPct(this.store.totalSeries(), this.from(), this.to()));
+
+  protected readonly fmtDate = (iso: string): string => formatDateItalian(isoToDate(iso));
 
   readonly lineOptions = computed<EChartsCoreOption>(() => {
     const dark = this.theme.dark();
@@ -76,7 +100,7 @@ export class PortfolioPage {
       tooltip: { trigger: 'axis', valueFormatter: (v: unknown) => eur(Number(v)) },
       xAxis: {
         type: 'category',
-        data: series.map((s) => s.date),
+        data: series.map((s) => this.fmtDate(s.date)),
         axisLine: { lineStyle: { color: line } },
         axisLabel: { color: text, fontFamily: 'Spline Sans Mono' },
       },

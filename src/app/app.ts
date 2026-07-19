@@ -1,10 +1,32 @@
-import { ChangeDetectionStrategy, Component, HostListener, inject, signal, viewChild } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { BrnDialog, BrnDialogContent } from '@spartan-ng/brain/dialog';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
+import { HlmDialog } from '@spartan-ng/helm/dialog';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChartPie,
+  lucideList,
+  lucideLogOut,
+  lucideMoon,
+  lucidePlus,
+  lucideSun,
+  lucideTag,
+  lucideWallet,
+} from '@ng-icons/lucide';
 import { AuthService } from './core/auth.service';
-import { ThemeService } from './core/stores';
+import { CategoryStore, PortfolioStore, ThemeService, TransactionStore } from './core/stores';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { HlmDialogContent, HlmDialogOverlay, HlmDialogTitle } from '@spartan-ng/helm/dialog';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
+import { HlmSpinner } from '@spartan-ng/helm/spinner';
 import { TransactionForm } from './features/log/transaction-form';
 
 @Component({
@@ -15,12 +37,13 @@ import { TransactionForm } from './features/log/transaction-form';
     RouterLink,
     RouterLinkActive,
     HlmButton,
+    HlmSpinner,
+    NgIcon,
     TransactionForm,
-    BrnDialog,
-    BrnDialogContent,
-    HlmDialogOverlay,
-    HlmDialogContent,
-    HlmDialogTitle,
+    ...HlmDialogImports,
+  ],
+  providers: [
+    provideIcons({ lucideChartPie, lucideList, lucideLogOut, lucideMoon, lucidePlus, lucideSun, lucideTag, lucideWallet }),
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -28,14 +51,53 @@ import { TransactionForm } from './features/log/transaction-form';
 export class App {
   protected readonly theme = inject(ThemeService);
   protected readonly auth = inject(AuthService);
+  private readonly categoryStore = inject(CategoryStore);
+  private readonly transactionStore = inject(TransactionStore);
+  private readonly portfolioStore = inject(PortfolioStore);
   private readonly router = inject(Router);
-  private readonly quickAdd = viewChild.required<BrnDialog>('quickAdd');
+  private readonly quickAdd = viewChild.required<HlmDialog>('quickAdd');
+
+  /** Vero quando i tre store dati hanno completato il caricamento iniziale dal repository. */
+  protected readonly dataReady = computed(
+    () => this.categoryStore.ready() && this.transactionStore.ready() && this.portfolioStore.ready(),
+  );
+
+  /** Vero mentre il router sta risolvendo una navigazione (utile per lo chunk lazy-loaded). */
+  protected readonly navigating = signal(false);
+
+  /** Alterna tra due classi identiche per far ripartire l'animazione di fade a ogni cambio pagina. */
+  protected readonly routeAnimToggle = signal(false);
+
+  constructor() {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationStart) this.navigating.set(true);
+      if (
+        event instanceof NavigationEnd ||
+        event instanceof NavigationCancel ||
+        event instanceof NavigationError
+      ) {
+        this.navigating.set(false);
+      }
+    });
+
+    // Se la sessione scade (o non esiste più) mentre siamo già dentro l'app, il guard
+    // non viene rieseguito finché non parte una nuova navigazione: ci pensa questo effect.
+    effect(() => {
+      if (this.auth.ready() && !this.auth.user() && !this.router.url.startsWith('/login')) {
+        void this.router.navigateByUrl('/login');
+      }
+    });
+  }
+
+  onRouteActivate(): void {
+    this.routeAnimToggle.update((v) => !v);
+  }
 
   protected readonly links = [
-    { path: '/movimenti', label: 'Movimenti', icon: '☰' },
-    { path: '/dashboard', label: 'Grafici', icon: '◔' },
-    { path: '/patrimonio', label: 'Patrimonio', icon: '◆' },
-    { path: '/categorie', label: 'Categorie', icon: '⊞' },
+    { path: '/movimenti', label: 'Movimenti', icon: 'lucideList' },
+    { path: '/dashboard', label: 'Grafici', icon: 'lucideChartPie' },
+    { path: '/patrimonio', label: 'Patrimonio', icon: 'lucideWallet' },
+    { path: '/categorie', label: 'Categorie', icon: 'lucideTag' },
   ];
 
   openQuickAdd(): void {

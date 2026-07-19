@@ -3,11 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import type { EChartsCoreOption } from 'echarts';
 import { CategoryStore, ThemeService, TransactionStore } from '../../core/stores';
-import { MONTHS_SHORT, eur } from '../../core/format';
+import { MONTHS_SHORT, dateToIso, eur, formatDateItalian, isoToDate } from '../../core/format';
 import { todayIso } from '../../core/models';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
-import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmLabel } from '@spartan-ng/helm/label';
 
 type RangePreset = '3m' | '6m' | '12m' | 'ytd' | 'custom';
@@ -22,7 +22,7 @@ function isoShift(monthsBack: number): string {
 @Component({
   selector: 'app-dashboard-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, NgxEchartsDirective, HlmButton, HlmCard, HlmInput, HlmLabel],
+  imports: [FormsModule, NgxEchartsDirective, HlmButton, HlmCard, HlmLabel, ...HlmDatePickerImports],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.css',
 })
@@ -43,6 +43,17 @@ export class DashboardPage {
   readonly customFrom = signal(isoShift(5));
   readonly customTo = signal(todayIso());
 
+  readonly customFromDate = computed(() => isoToDate(this.customFrom()));
+  readonly customToDate = computed(() => isoToDate(this.customTo()));
+
+  onCustomFromChange(value: Date | null): void {
+    if (value) this.customFrom.set(dateToIso(value));
+  }
+
+  onCustomToChange(value: Date | null): void {
+    if (value) this.customTo.set(dateToIso(value));
+  }
+
   readonly from = computed(() => {
     switch (this.range()) {
       case '3m': return isoShift(2);
@@ -53,6 +64,8 @@ export class DashboardPage {
     }
   });
   readonly to = computed(() => (this.range() === 'custom' ? this.customTo() : todayIso()));
+
+  protected readonly fmtDate = (iso: string): string => formatDateItalian(isoToDate(iso));
 
   private readonly inRange = computed(() => this.txStore.inRange(this.from(), this.to()));
 
