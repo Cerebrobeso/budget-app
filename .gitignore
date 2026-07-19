@@ -43,3 +43,7 @@ Thumbs.db
 .claude
 CLAUDE.md
 /supabase/schema.sql
+
+# ==== Dati personali ====
+# Dati finanziari reali usati come seed locale: non va in repo.
+/src/app/core/seed-data.ts
