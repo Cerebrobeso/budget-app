@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-19
+
+### Added
+- Transfer transactions between own accounts (e.g. checking -> savings), excluded from the month's income/expense/balance.
+- Unexpected/planned tag on transactions, replacing the "important" flag: quick-toggle button and highlight in the log, dedicated filters, and counts in the dashboard's monthly chart tooltips.
+- Delete button and stale-snapshot warning (no update in over a month) for portfolio positions.
+
 ## [1.0.0] - 2026-07-19
 
 ### Added
