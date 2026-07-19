@@ -11,6 +11,7 @@ import {
   Subcategory,
   SubcategoryOverlay,
   Transaction,
+  TRANSFER_CATEGORY_ID,
   todayIso,
   uid,
 } from './models';
@@ -77,6 +78,7 @@ export class CategoryStore {
   }
 
   label(categoryId: string, subcategoryId: string | null): string {
+    if (categoryId === TRANSFER_CATEGORY_ID) return 'Trasferimento';
     const cat = this.byId(categoryId);
     if (!cat) return categoryId;
     const sub = subcategoryId ? this.allSubs(categoryId).find((s) => s.id === subcategoryId) : undefined;
@@ -416,6 +418,7 @@ export class RecurringStore {
           date,
           description,
           recurringRuleId: rule.id,
+          tag: null,
         });
       }
 

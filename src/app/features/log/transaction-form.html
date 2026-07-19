@@ -16,6 +16,7 @@
         class="figure font-semibold pr-10 text-right"
         [class.!text-income]="type() === 'income'"
         [class.!text-expense]="type() === 'expense'"
+        [class.!text-primary]="type() === 'transfer'"
         [ngModel]="amountText()"
         (ngModelChange)="amountText.set($event)"
         #amountInput
@@ -25,7 +26,7 @@
   </div>
 
   <!-- Tipo -->
-  <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Tipo di movimento">
+  <div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tipo di movimento">
     <button
       type="button"
       hlmBtn
@@ -50,40 +51,59 @@
     >
       Entrata
     </button>
+    <button
+      type="button"
+      hlmBtn
+      variant="outline"
+      [attr.aria-pressed]="type() === 'transfer'"
+      [class]="type() === 'transfer'
+        ? 'transition-all bg-primary hover:bg-primary text-primary-foreground border-transparent hover:opacity-90 ring-2 ring-primary/50 ring-offset-2 ring-offset-background shadow-md shadow-primary/30'
+        : 'transition-all opacity-60 hover:opacity-100'"
+      (click)="setType('transfer')"
+    >
+      Trasferimento
+    </button>
   </div>
 
-  <!-- Categoria + sottocategoria -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-    <div>
-      <label hlmLabel for="tx-category">Categoria</label>
-      <div hlmSelect [value]="categoryId()" (valueChange)="onCategoryChange($event)" [disabled]="type() === null" [itemToString]="categoryLabel">
-        <hlm-select-trigger buttonId="tx-category" class="w-full">
-          <span hlmSelectValue placeholder="Scegli categoria"></span>
-        </hlm-select-trigger>
-        <hlm-select-content *hlmSelectPortal>
-          @for (cat of availableCategories(); track cat.id) {
-            <hlm-select-item [value]="cat.id">
-              <span class="mr-2 inline-block size-2.5 rounded-full" [style.background]="cat.color"></span>
-              {{ cat.name }}
-            </hlm-select-item>
-          }
-        </hlm-select-content>
+  @if (type() === 'transfer') {
+    <p class="text-xs text-muted-foreground">
+      Spostamento tra tuoi conti: non conta come uscita/entrata nel bilancio del mese.
+      Ricordati di aggiornare a mano gli snapshot dei conti in Patrimonio.
+    </p>
+  } @else {
+    <!-- Categoria + sottocategoria -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label hlmLabel for="tx-category">Categoria</label>
+        <div hlmSelect [value]="categoryId()" (valueChange)="onCategoryChange($event)" [disabled]="type() === null" [itemToString]="categoryLabel">
+          <hlm-select-trigger buttonId="tx-category" class="w-full">
+            <span hlmSelectValue placeholder="Scegli categoria"></span>
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (cat of availableCategories(); track cat.id) {
+              <hlm-select-item [value]="cat.id">
+                <span class="mr-2 inline-block size-2.5 rounded-full" [style.background]="cat.color"></span>
+                {{ cat.name }}
+              </hlm-select-item>
+            }
+          </hlm-select-content>
+        </div>
+      </div>
+      <div>
+        <label hlmLabel for="tx-subcategory">Sottocategoria</label>
+        <div hlmSelect [value]="subcategoryId()" (valueChange)="onSubChange($event)" [disabled]="type() === null || subs().length === 0" [itemToString]="subcategoryLabel">
+          <hlm-select-trigger buttonId="tx-subcategory" class="w-full">
+            <span hlmSelectValue placeholder="—"></span>
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (sub of subs(); track sub.id) {
+              <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </div>
       </div>
     </div>
-    <div>
-      <label hlmLabel for="tx-subcategory">Sottocategoria</label>
-      <div hlmSelect [value]="subcategoryId()" (valueChange)="onSubChange($event)" [disabled]="type() === null || subs().length === 0" [itemToString]="subcategoryLabel">
-        <hlm-select-trigger buttonId="tx-subcategory" class="w-full">
-          <span hlmSelectValue placeholder="—"></span>
-        </hlm-select-trigger>
-        <hlm-select-content *hlmSelectPortal>
-          @for (sub of subs(); track sub.id) {
-            <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
-          }
-        </hlm-select-content>
-      </div>
-    </div>
-  </div>
+  }
 
   <!-- Data + descrizione -->
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -100,6 +120,22 @@
              [disabled]="type() === null"
              [ngModel]="description()" (ngModelChange)="description.set($event)" />
     </div>
+  </div>
+
+  <!-- Movimento fuori dall'ordinario: imprevisto o grossa spesa programmata (mutuamente esclusivi) -->
+  <div class="flex flex-wrap gap-2" role="group" aria-label="Etichetta movimento">
+    <button type="button" hlmBtn size="sm" variant="outline" [disabled]="type() === null"
+            [attr.aria-pressed]="tag() === 'unexpected'"
+            [class]="tag() === 'unexpected' ? 'bg-expense hover:bg-expense text-white border-transparent' : ''"
+            (click)="setTag('unexpected')">
+      Imprevisto
+    </button>
+    <button type="button" hlmBtn size="sm" variant="outline" [disabled]="type() === null"
+            [attr.aria-pressed]="tag() === 'planned'"
+            [class]="tag() === 'planned' ? 'bg-primary hover:bg-primary text-primary-foreground border-transparent' : ''"
+            (click)="setTag('planned')">
+      Spesa programmata
+    </button>
   </div>
 
   @if (error()) {

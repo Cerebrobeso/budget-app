@@ -69,27 +69,47 @@ export class DashboardPage {
 
   private readonly inRange = computed(() => this.txStore.inRange(this.from(), this.to()));
 
-  /** Bucket mensili nel range. */
+  /** Bucket mensili nel range. I trasferimenti tra propri conti non contano né come entrata né come uscita. */
   private readonly monthly = computed(() => {
-    const buckets = new Map<string, { income: number; expense: number }>();
+    const buckets = new Map<string, { income: number; expense: number; unexpectedCount: number; plannedCount: number }>();
     const start = this.from().slice(0, 7);
     const end = this.to().slice(0, 7);
     let [y, m] = start.split('-').map(Number);
     while (`${y}-${String(m).padStart(2, '0')}` <= end) {
-      buckets.set(`${y}-${String(m).padStart(2, '0')}`, { income: 0, expense: 0 });
+      buckets.set(`${y}-${String(m).padStart(2, '0')}`, { income: 0, expense: 0, unexpectedCount: 0, plannedCount: 0 });
       m++; if (m > 12) { m = 1; y++; }
     }
     for (const tx of this.inRange()) {
       const key = tx.date.slice(0, 7);
       const b = buckets.get(key);
       if (!b) continue;
-      if (tx.type === 'income') b.income += tx.amount; else b.expense += tx.amount;
+      if (tx.type === 'income') b.income += tx.amount;
+      else if (tx.type === 'expense') b.expense += tx.amount;
+      if (tx.tag === 'unexpected') b.unexpectedCount++;
+      else if (tx.tag === 'planned') b.plannedCount++;
     }
     return [...buckets.entries()].map(([key, v]) => {
       const [yy, mm] = key.split('-').map(Number);
       return { key, label: `${MONTHS_SHORT[mm - 1]} ${String(yy).slice(2)}`, ...v };
     });
   });
+
+  /** Tooltip comune ai grafici mensili: righe delle serie + conteggio imprevisti/spese programmate del mese. */
+  private monthlyTooltipFormatter(data: { unexpectedCount: number; plannedCount: number }[]) {
+    return (paramsRaw: unknown): string => {
+      const params = paramsRaw as Array<{ marker: string; seriesName: string; value: unknown; dataIndex: number }>;
+      if (!params.length) return '';
+      const lines = params.map((p) => `${p.marker}${p.seriesName}: ${eur(Number(p.value))}`);
+      const bucket = data[params[0].dataIndex];
+      if (bucket?.unexpectedCount) {
+        lines.push(`⚠️ ${bucket.unexpectedCount} imprevist${bucket.unexpectedCount === 1 ? 'o' : 'i'}`);
+      }
+      if (bucket?.plannedCount) {
+        lines.push(`📅 ${bucket.plannedCount} programmat${bucket.plannedCount === 1 ? 'a' : 'e'}`);
+      }
+      return lines.join('<br/>');
+    };
+  }
 
   private axisColors() {
     const dark = this.theme.dark();
@@ -125,7 +145,7 @@ export class DashboardPage {
     const c = this.axisColors();
     return {
       ...this.baseAxes(data.map((d) => d.label)),
-      tooltip: { trigger: 'axis', valueFormatter: (v: unknown) => eur(Number(v)) },
+      tooltip: { trigger: 'axis', formatter: this.monthlyTooltipFormatter(data) },
       legend: { top: 0, textStyle: { color: c.text } },
       series: [
         { name: 'Entrate', type: 'bar', data: data.map((d) => round2(d.income)), itemStyle: { color: c.income, borderRadius: [4, 4, 0, 0] } },
@@ -238,7 +258,7 @@ export class DashboardPage {
     const cumulative = data.map((d) => round2((cum += d.income - d.expense)));
     return {
       ...this.baseAxes(data.map((d) => d.label)),
-      tooltip: { trigger: 'axis', valueFormatter: (v: unknown) => eur(Number(v)) },
+      tooltip: { trigger: 'axis', formatter: this.monthlyTooltipFormatter(data) },
       legend: { top: 0, textStyle: { color: c.text } },
       series: [
         {

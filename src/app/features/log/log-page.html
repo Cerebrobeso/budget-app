@@ -84,6 +84,16 @@
       }
     </hlm-select-content>
   </div>
+  <button hlmBtn size="sm" [variant]="filterTag() === 'unexpected' ? 'default' : 'outline'"
+          [class]="filterTag() === 'unexpected' ? 'bg-expense hover:bg-expense text-white border-transparent' : ''"
+          (click)="setFilterTag('unexpected')">
+    <ng-icon name="lucideTriangleAlert" class="mr-1" size="14" /> Solo imprevisti
+  </button>
+  <button hlmBtn size="sm" [variant]="filterTag() === 'planned' ? 'default' : 'outline'"
+          [class]="filterTag() === 'planned' ? 'bg-primary hover:bg-primary text-primary-foreground border-transparent' : ''"
+          (click)="setFilterTag('planned')">
+    <ng-icon name="lucideCalendarDays" class="mr-1" size="14" /> Solo programmate
+  </button>
 </div>
 
 <!-- Lista movimenti raggruppata per giorno -->
@@ -101,12 +111,20 @@
       </div>
       <div hlmCard class="divide-y divide-border" style="--card-spacing: 0;">
         @for (tx of group.items; track tx.id) {
-          <div class="flex items-center gap-3 px-4 py-3.5">
+          <div class="flex items-center gap-3 px-4 py-3.5"
+               [class.bg-expense-soft]="tx.tag === 'unexpected'" [class.bg-accent-soft]="tx.tag === 'planned'">
             <span class="size-2.5 shrink-0 rounded-full" [style.background]="catStore.color(tx.categoryId)"
                   [attr.aria-hidden]="true"></span>
             <div class="min-w-0 flex-1">
-              <div class="truncate text-base font-medium">
-                {{ tx.description || catStore.label(tx.categoryId, tx.subcategoryId) }}
+              <div class="flex items-center gap-1.5 truncate text-base font-medium">
+                @if (tx.tag === 'unexpected') {
+                  <ng-icon name="lucideTriangleAlert" size="14" class="shrink-0 text-expense"
+                           aria-label="Movimento imprevisto" />
+                } @else if (tx.tag === 'planned') {
+                  <ng-icon name="lucideCalendarDays" size="14" class="shrink-0 text-primary"
+                           aria-label="Spesa programmata" />
+                }
+                <span class="truncate">{{ tx.description || catStore.label(tx.categoryId, tx.subcategoryId) }}</span>
               </div>
               <div class="truncate text-sm text-muted-foreground">
                 {{ catStore.label(tx.categoryId, tx.subcategoryId) }}
@@ -114,9 +132,17 @@
             </div>
             <div class="figure shrink-0 text-base font-semibold"
                  [class.text-income]="tx.type === 'income'" [class.text-expense]="tx.type === 'expense'">
-              {{ tx.type === 'income' ? '+' : '−' }}{{ fmt(tx.amount) }}
+              {{ tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : '' }}{{ fmt(tx.amount) }}
             </div>
             <div class="flex shrink-0 gap-1">
+              <button hlmBtn variant="ghost" size="icon"
+                      [class.text-expense]="tx.tag === 'unexpected'" [class.text-primary]="tx.tag === 'planned'"
+                      [class.text-muted-foreground]="!tx.tag"
+                      [attr.aria-pressed]="!!tx.tag"
+                      [attr.aria-label]="tx.tag === 'unexpected' ? 'Segna come programmata' : tx.tag === 'planned' ? 'Rimuovi etichetta' : 'Segna come imprevisto'"
+                      (click)="cycleTag(tx)">
+                <ng-icon [name]="tx.tag === 'planned' ? 'lucideCalendarDays' : 'lucideTriangleAlert'" size="16" />
+              </button>
               <button hlmBtn variant="ghost" size="icon"
                       [attr.aria-label]="'Modifica ' + (tx.description || 'movimento')"
                       (click)="startEdit(tx)"><ng-icon name="lucidePencil" size="16" /></button>

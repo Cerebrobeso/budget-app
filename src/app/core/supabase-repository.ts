@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Asset, Category, RecurringRule, SubcategoryOverlay, Transaction } from './models';
+import { Asset, Category, RecurringRule, SubcategoryOverlay, Transaction, TransactionTag } from './models';
 import { BudgetRepository } from './repository';
 import { supabase } from './supabase.client';
 
@@ -22,6 +22,7 @@ function txToRow(tx: Transaction) {
     subcategory_id: tx.subcategoryId,
     description: tx.description,
     recurring_rule_id: tx.recurringRuleId,
+    tag: tx.tag,
   };
 }
 function rowToTx(row: any): Transaction {
@@ -34,6 +35,7 @@ function rowToTx(row: any): Transaction {
     subcategoryId: row.subcategory_id,
     description: row.description ?? '',
     recurringRuleId: row.recurring_rule_id ?? null,
+    tag: (row.tag as TransactionTag | null) ?? null,
   };
 }
 function txPatchToRow(patch: Partial<Omit<Transaction, 'id'>>): Record<string, unknown> {
@@ -45,6 +47,7 @@ function txPatchToRow(patch: Partial<Omit<Transaction, 'id'>>): Record<string, u
   if (patch.subcategoryId !== undefined) row['subcategory_id'] = patch.subcategoryId;
   if (patch.description !== undefined) row['description'] = patch.description;
   if (patch.recurringRuleId !== undefined) row['recurring_rule_id'] = patch.recurringRuleId;
+  if (patch.tag !== undefined) row['tag'] = patch.tag;
   return row;
 }
 

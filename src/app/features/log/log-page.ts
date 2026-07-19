@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTrash2, lucideX } from '@ng-icons/lucide';
-import { Transaction, todayIso } from '../../core/models';
+import { lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTrash2, lucideTriangleAlert, lucideX } from '@ng-icons/lucide';
+import { Transaction, TransactionTag, TRANSACTION_TAG_LABEL, TRANSFER_CATEGORY_ID, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { MONTHS_LONG, MONTHS_SHORT, eur, eurSigned, formatDayLabel } from '../../core/format';
 import { downloadFile, toCsv } from '../../core/export';
@@ -37,7 +37,7 @@ interface DayGroup {
     DatePipe
   ],
   providers: [
-    provideIcons({ lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTrash2, lucideX }),
+    provideIcons({ lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTrash2, lucideTriangleAlert, lucideX }),
   ],
   templateUrl: './log-page.html',
   styleUrl: './log-page.css',
@@ -51,6 +51,7 @@ export class LogPage {
   readonly month = signal(this.now.getMonth() + 1);
   readonly filterCategory = signal('__all__');
   readonly filterSub = signal('__all__');
+  readonly filterTag = signal<TransactionTag | null>(null);
   /** Testo di ricerca sulla descrizione: se valorizzato, cerca in tutti i mesi (non solo quello aperto). */
   readonly search = signal('');
 
@@ -72,6 +73,7 @@ export class LogPage {
   /** Con una ricerca attiva si guarda in tutti i mesi, altrimenti solo in quello aperto. */
   readonly searching = computed(() => this.search().trim().length > 0);
 
+  /** Ricerca + filtro categoria/sottocategoria: guida il saldo del mese, indipendentemente dal filtro per etichetta. */
   readonly filtered = computed(() => {
     const term = this.search().trim().toLowerCase();
     let items = term ? this.txStore.sorted() : this.txStore.byMonth(this.year(), this.month());
@@ -85,6 +87,13 @@ export class LogPage {
     return items;
   });
 
+  /** Movimenti effettivamente mostrati in lista/export: `filtered` più il filtro per etichetta, se attivo. */
+  readonly displayedItems = computed(() => {
+    const items = this.filtered();
+    const tag = this.filterTag();
+    return tag ? items.filter((t) => t.tag === tag) : items;
+  });
+
   readonly totIncome = computed(() =>
     this.filtered().filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
   );
@@ -95,7 +104,7 @@ export class LogPage {
 
   readonly groups = computed<DayGroup[]>(() => {
     const map = new Map<string, Transaction[]>();
-    for (const tx of this.filtered()) {
+    for (const tx of this.displayedItems()) {
       const list = map.get(tx.date) ?? [];
       list.push(tx);
       map.set(tx.date, list);
@@ -122,6 +131,16 @@ export class LogPage {
 
   onFilterSub(value: unknown): void {
     if (typeof value === 'string' && value) this.filterSub.set(value);
+  }
+
+  setFilterTag(tag: TransactionTag): void {
+    this.filterTag.update((cur) => (cur === tag ? null : tag));
+  }
+
+  /** Fa scorrere l'etichetta di un movimento (nessuna -> imprevisto -> programmata -> nessuna) senza passare dal form di modifica. */
+  cycleTag(tx: Transaction): void {
+    const next: TransactionTag | null = tx.tag === null ? 'unexpected' : tx.tag === 'unexpected' ? 'planned' : null;
+    this.txStore.update(tx.id, { tag: next });
   }
 
   protected readonly categoryLabel = (id: string): string =>
@@ -152,14 +171,15 @@ export class LogPage {
 
   /** Esporta i movimenti attualmente visibili (con ricerca/filtri applicati) in CSV. */
   exportCsv(): void {
-    const header = ['Data', 'Tipo', 'Categoria', 'Sottocategoria', 'Descrizione', 'Importo'];
-    const rows = this.filtered().map((t) => [
+    const header = ['Data', 'Tipo', 'Categoria', 'Sottocategoria', 'Descrizione', 'Importo', 'Etichetta'];
+    const rows = this.displayedItems().map((t) => [
       t.date,
-      t.type === 'income' ? 'Entrata' : 'Uscita',
-      this.catStore.byId(t.categoryId)?.name ?? t.categoryId,
+      t.type === 'income' ? 'Entrata' : t.type === 'expense' ? 'Uscita' : 'Trasferimento',
+      t.categoryId === TRANSFER_CATEGORY_ID ? 'Trasferimento' : (this.catStore.byId(t.categoryId)?.name ?? t.categoryId),
       t.subcategoryId ? (this.catStore.subName(t.categoryId, t.subcategoryId) ?? '') : '',
       t.description,
       t.amount.toFixed(2).replace('.', ','),
+      t.tag ? TRANSACTION_TAG_LABEL[t.tag] : '',
     ]);
     downloadFile(toCsv([header, ...rows]), `registro-movimenti-${todayIso()}.csv`, 'text/csv;charset=utf-8;');
   }

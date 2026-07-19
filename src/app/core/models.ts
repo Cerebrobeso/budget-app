@@ -1,4 +1,22 @@
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
+
+/**
+ * categoryId fisso per i movimenti di tipo 'transfer' (spostamenti tra propri conti, es. corrente -> deposito):
+ * non sono né entrate né uscite, quindi non hanno una vera categoria e non contano nel bilancio del mese.
+ */
+export const TRANSFER_CATEGORY_ID = '__transfer__';
+
+/**
+ * Etichetta opzionale per un movimento fuori dall'ordinario: 'unexpected' (imprevisto, non
+ * pianificato) o 'planned' (spesa/entrata grossa ma prevista in anticipo, es. vacanza). Le due
+ * si escludono a vicenda — servono a spiegare a colpo d'occhio un saldo del mese fuori norma.
+ */
+export type TransactionTag = 'unexpected' | 'planned';
+
+export const TRANSACTION_TAG_LABEL: Record<TransactionTag, string> = {
+  unexpected: 'Imprevisto',
+  planned: 'Programmata',
+};
 
 export interface Transaction {
   id: string;
@@ -11,6 +29,7 @@ export interface Transaction {
   description: string;
   /** Regola ricorrente che ha generato questo movimento, null se inserito a mano. */
   recurringRuleId: string | null;
+  tag: TransactionTag | null;
 }
 
 /**

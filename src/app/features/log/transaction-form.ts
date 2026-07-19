@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MaskitoDirective } from '@maskito/angular';
-import { Transaction, TransactionType, todayIso } from '../../core/models';
+import { Transaction, TransactionTag, TransactionType, TRANSFER_CATEGORY_ID, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { AMOUNT_MASK, dateToIso, isoToDate, parseAmountMask, stringifyAmountMask } from '../../core/format';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -49,6 +49,7 @@ export class TransactionForm {
   readonly subcategoryId = signal<string | null>(null);
   readonly date = signal<string>(todayIso());
   readonly description = signal<string>('');
+  readonly tag = signal<TransactionTag | null>(null);
   readonly error = signal<string>('');
 
   readonly editing = computed(() => this.transaction() !== null);
@@ -61,8 +62,9 @@ export class TransactionForm {
 
   readonly availableCategories = computed(() => {
     const type = this.type();
-    if (!type) return [];
-    return type === 'income' ? this.catStore.incomeCategories() : this.catStore.expenseCategories();
+    if (type === 'income') return this.catStore.incomeCategories();
+    if (type === 'expense') return this.catStore.expenseCategories();
+    return [];
   });
 
   readonly subs = computed(() => {
@@ -81,6 +83,7 @@ export class TransactionForm {
         this.subcategoryId.set(tx.subcategoryId);
         this.date.set(tx.date);
         this.description.set(tx.description);
+        this.tag.set(tx.tag);
       }
     });
   }
@@ -93,6 +96,10 @@ export class TransactionForm {
       this.categoryId.set(first.id);
       this.subcategoryId.set(this.catStore.activeSubs(first.id)[0]?.id ?? null);
     }
+  }
+
+  setTag(t: TransactionTag): void {
+    this.tag.set(this.tag() === t ? null : t);
   }
 
   onCategoryChange(value: unknown): void {
@@ -114,7 +121,7 @@ export class TransactionForm {
   save(): void {
     const type = this.type();
     if (!type) {
-      this.error.set('Seleziona Entrata o Uscita.');
+      this.error.set('Seleziona Entrata, Uscita o Trasferimento.');
       return;
     }
     const amount = Number(this.amount());
@@ -128,14 +135,16 @@ export class TransactionForm {
     }
     this.error.set('');
     const existing = this.transaction();
+    const isTransfer = type === 'transfer';
     const payload = {
       amount: Math.round(amount * 100) / 100,
       type,
-      categoryId: this.categoryId(),
-      subcategoryId: this.subcategoryId(),
+      categoryId: isTransfer ? TRANSFER_CATEGORY_ID : this.categoryId(),
+      subcategoryId: isTransfer ? null : this.subcategoryId(),
       date: this.date(),
       description: this.description().trim(),
       recurringRuleId: existing?.recurringRuleId ?? null,
+      tag: this.tag(),
     };
     if (existing) {
       this.txStore.update(existing.id, payload);
@@ -144,6 +153,7 @@ export class TransactionForm {
       // pronto per il movimento successivo
       this.amountText.set('');
       this.description.set('');
+      this.tag.set(null);
     }
     this.saved.emit();
   }

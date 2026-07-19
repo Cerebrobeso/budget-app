@@ -3,7 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import type { EChartsCoreOption } from 'echarts';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePlus, lucideX } from '@ng-icons/lucide';
+import { lucidePlus, lucideTrash2, lucideTriangleAlert, lucideX } from '@ng-icons/lucide';
+import { isBefore, subMonths } from 'date-fns';
 import { ASSET_CATEGORY_LABEL, Asset, AssetCategory, todayIso } from '../../core/models';
 import { PortfolioStore, ThemeService, latest, returnPct } from '../../core/stores';
 import { dateToIso, eur, formatDateItalian, isoToDate, pct } from '../../core/format';
@@ -32,7 +33,7 @@ import { HlmSelectImports } from '@spartan-ng/helm/select';
     ...HlmSelectImports,
     ...HlmDatePickerImports,
   ],
-  providers: [provideIcons({ lucidePlus, lucideX })],
+  providers: [provideIcons({ lucidePlus, lucideTrash2, lucideTriangleAlert, lucideX })],
   templateUrl: './portfolio-page.html',
   styleUrl: './portfolio-page.css',
 })
@@ -45,6 +46,7 @@ export class PortfolioPage {
 
   private readonly assetDialog = viewChild.required<HlmDialog>('assetDialog');
   private readonly snapDialog = viewChild.required<HlmDialog>('snapDialog');
+  private readonly deleteAssetDialog = viewChild.required<HlmDialog>('deleteAssetDialog');
 
   readonly from = signal(`${new Date().getFullYear()}-01-01`);
   readonly to = signal(todayIso());
@@ -61,6 +63,7 @@ export class PortfolioPage {
   readonly snapDate = signal(todayIso());
 
   readonly expanded = signal<string | null>(null);
+  readonly deletingAsset = signal<Asset | null>(null);
 
   readonly archivedAssets = computed(() => this.store.assets().filter((a) => a.archived));
 
@@ -158,6 +161,19 @@ export class PortfolioPage {
     this.snapDialog().close({});
   }
 
+  askDeleteAsset(asset: Asset): void {
+    this.deletingAsset.set(asset);
+    this.deleteAssetDialog().open();
+  }
+
+  confirmDeleteAsset(): void {
+    const asset = this.deletingAsset();
+    if (!asset) return;
+    this.store.remove(asset.id);
+    this.deletingAsset.set(null);
+    this.deleteAssetDialog().close({});
+  }
+
   toggleHistory(id: string): void {
     this.expanded.update((cur) => (cur === id ? null : id));
   }
@@ -168,6 +184,13 @@ export class PortfolioPage {
 
   assetReturn(asset: Asset): number | null {
     return returnPct(asset.snapshots, this.from(), this.to());
+  }
+
+  /** Nessuno snapshot da più di un mese: il valore mostrato rischia di essere superato. */
+  isStale(asset: Asset): boolean {
+    const last = latest(asset);
+    if (!last) return false;
+    return isBefore(isoToDate(last.date), subMonths(new Date(), 1));
   }
 
   categoryLabel(cat: AssetCategory): string {
