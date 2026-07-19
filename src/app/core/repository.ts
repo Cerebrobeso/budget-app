@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import { Asset, Category, Transaction } from './models';
+import { Asset, Category, RecurringRule, Transaction } from './models';
 
 /**
  * Contratto di persistenza. Le scritture sono granulari (add/update/remove)
@@ -21,12 +21,18 @@ export interface BudgetRepository {
   addAsset(asset: Asset): Promise<void>;
   updateAsset(id: string, patch: Partial<Omit<Asset, 'id'>>): Promise<void>;
   removeAsset(id: string): Promise<void>;
+
+  loadRecurringRules(): Promise<RecurringRule[] | null>;
+  addRecurringRule(rule: RecurringRule): Promise<void>;
+  updateRecurringRule(id: string, patch: Partial<Omit<RecurringRule, 'id'>>): Promise<void>;
+  removeRecurringRule(id: string): Promise<void>;
 }
 
 const KEYS = {
   transactions: 'registro.transactions.v1',
   categories: 'registro.categories.v1',
   assets: 'registro.assets.v1',
+  recurringRules: 'registro.recurringRules.v1',
 } as const;
 
 /** Implementazione locale, usata solo se BUDGET_REPOSITORY non viene sovrascritto altrove. */
@@ -86,6 +92,22 @@ export class LocalStorageBudgetRepository implements BudgetRepository {
   async removeAsset(id: string): Promise<void> {
     const items = this.read<Asset[]>(KEYS.assets) ?? [];
     this.write(KEYS.assets, items.filter((a) => a.id !== id));
+  }
+
+  async loadRecurringRules(): Promise<RecurringRule[] | null> {
+    return this.read<RecurringRule[]>(KEYS.recurringRules) ?? [];
+  }
+  async addRecurringRule(rule: RecurringRule): Promise<void> {
+    const items = this.read<RecurringRule[]>(KEYS.recurringRules) ?? [];
+    this.write(KEYS.recurringRules, [...items, rule]);
+  }
+  async updateRecurringRule(id: string, patch: Partial<Omit<RecurringRule, 'id'>>): Promise<void> {
+    const items = this.read<RecurringRule[]>(KEYS.recurringRules) ?? [];
+    this.write(KEYS.recurringRules, items.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
+  async removeRecurringRule(id: string): Promise<void> {
+    const items = this.read<RecurringRule[]>(KEYS.recurringRules) ?? [];
+    this.write(KEYS.recurringRules, items.filter((r) => r.id !== id));
   }
 }
 

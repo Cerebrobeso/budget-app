@@ -23,6 +23,9 @@
             >{{ link.label }}</a>
           }
         </nav>
+        <button hlmBtn variant="outline" size="icon" (click)="exportBackup()" aria-label="Backup dati (JSON)">
+          <ng-icon name="lucideDownload" />
+        </button>
         <button hlmBtn variant="outline" size="icon" (click)="theme.toggle()"
                 [attr.aria-label]="theme.dark() ? 'Passa al tema chiaro' : 'Passa al tema scuro'">
           @if (theme.dark()) { <ng-icon name="lucideSun" /> } @else { <ng-icon name="lucideMoon" /> }
@@ -84,3 +87,5 @@
 } @else {
   <router-outlet />
 }
+
+<hlm-toaster richColors [theme]="theme.dark() ? 'dark' : 'light'" />

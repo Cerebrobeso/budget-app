@@ -14,19 +14,24 @@ import { HlmDialog } from '@spartan-ng/helm/dialog';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideChartPie,
+  lucideDownload,
   lucideList,
   lucideLogOut,
   lucideMoon,
   lucidePlus,
+  lucideRepeat,
   lucideSun,
   lucideTag,
   lucideWallet,
 } from '@ng-icons/lucide';
 import { AuthService } from './core/auth.service';
-import { CategoryStore, PortfolioStore, ThemeService, TransactionStore } from './core/stores';
+import { downloadFile } from './core/export';
+import { todayIso } from './core/models';
+import { CategoryStore, PortfolioStore, RecurringStore, ThemeService, TransactionStore } from './core/stores';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmSpinner } from '@spartan-ng/helm/spinner';
+import { HlmToasterImports } from '@spartan-ng/helm/sonner';
 import { TransactionForm } from './features/log/transaction-form';
 
 @Component({
@@ -41,9 +46,21 @@ import { TransactionForm } from './features/log/transaction-form';
     NgIcon,
     TransactionForm,
     ...HlmDialogImports,
+    ...HlmToasterImports,
   ],
   providers: [
-    provideIcons({ lucideChartPie, lucideList, lucideLogOut, lucideMoon, lucidePlus, lucideSun, lucideTag, lucideWallet }),
+    provideIcons({
+      lucideChartPie,
+      lucideDownload,
+      lucideList,
+      lucideLogOut,
+      lucideMoon,
+      lucidePlus,
+      lucideRepeat,
+      lucideSun,
+      lucideTag,
+      lucideWallet,
+    }),
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -54,12 +71,17 @@ export class App {
   private readonly categoryStore = inject(CategoryStore);
   private readonly transactionStore = inject(TransactionStore);
   private readonly portfolioStore = inject(PortfolioStore);
+  private readonly recurringStore = inject(RecurringStore);
   private readonly router = inject(Router);
   private readonly quickAdd = viewChild.required<HlmDialog>('quickAdd');
 
-  /** Vero quando i tre store dati hanno completato il caricamento iniziale dal repository. */
+  /** Vero quando tutti gli store dati hanno completato il caricamento iniziale dal repository. */
   protected readonly dataReady = computed(
-    () => this.categoryStore.ready() && this.transactionStore.ready() && this.portfolioStore.ready(),
+    () =>
+      this.categoryStore.ready() &&
+      this.transactionStore.ready() &&
+      this.portfolioStore.ready() &&
+      this.recurringStore.ready(),
   );
 
   /** Vero mentre il router sta risolvendo una navigazione (utile per lo chunk lazy-loaded). */
@@ -97,11 +119,24 @@ export class App {
     { path: '/movimenti', label: 'Movimenti', icon: 'lucideList' },
     { path: '/dashboard', label: 'Grafici', icon: 'lucideChartPie' },
     { path: '/patrimonio', label: 'Patrimonio', icon: 'lucideWallet' },
+    { path: '/ricorrenti', label: 'Ricorrenti', icon: 'lucideRepeat' },
     { path: '/categorie', label: 'Categorie', icon: 'lucideTag' },
   ];
 
   openQuickAdd(): void {
     this.quickAdd().open();
+  }
+
+  /** Backup completo (tutti i dati dell'utente) in JSON, scaricato lato client. */
+  exportBackup(): void {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      transactions: this.transactionStore.transactions(),
+      categories: this.categoryStore.categories(),
+      assets: this.portfolioStore.assets(),
+      recurringRules: this.recurringStore.rules(),
+    };
+    downloadFile(JSON.stringify(data, null, 2), `registro-backup-${todayIso()}.json`, 'application/json');
   }
 
   async logout(): Promise<void> {

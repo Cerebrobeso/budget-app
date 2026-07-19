@@ -1,8 +1,17 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import type { User } from '@supabase/supabase-js';
+import { toast } from '@spartan-ng/brain/sonner';
 import { AuthService } from './auth.service';
-import { Asset, AssetSnapshot, Category, Subcategory, Transaction, uid } from './models';
+import { isoToDate } from './format';
+import { Asset, AssetSnapshot, Category, RecurringRule, Subcategory, Transaction, todayIso, uid } from './models';
 import { BUDGET_REPOSITORY } from './repository';
+
+/** Annulla l'update ottimistico e avvisa l'utente se la scrittura remota fallisce. */
+function reportWriteFailure(err: unknown, rollback: () => void): void {
+  console.error(err);
+  rollback();
+  toast.error('Salvataggio non riuscito. Controlla la connessione e riprova.');
+}
 
 @Injectable({ providedIn: 'root' })
 export class CategoryStore {
@@ -54,7 +63,9 @@ export class CategoryStore {
   addCategory(name: string, kind: 'expense' | 'income', color: string): void {
     const cat: Category = { id: uid(), name, kind, color, subcategories: [{ id: uid(), name: 'Altro' }] };
     this.categories.update((list) => [...list, cat]);
-    void this.repo.addCategory(cat);
+    this.repo.addCategory(cat).catch((err) =>
+      reportWriteFailure(err, () => this.categories.update((list) => list.filter((c) => c.id !== cat.id))),
+    );
   }
 
   renameCategory(id: string, name: string): void {
@@ -90,7 +101,9 @@ export class CategoryStore {
     if (!current) return;
     const partial = fn(current);
     this.categories.update((list) => list.map((c) => (c.id === id ? { ...c, ...partial } : c)));
-    void this.repo.updateCategory(id, partial);
+    this.repo.updateCategory(id, partial).catch((err) =>
+      reportWriteFailure(err, () => this.categories.update((list) => list.map((c) => (c.id === id ? current : c)))),
+    );
   }
 }
 
@@ -129,17 +142,29 @@ export class TransactionStore {
   add(tx: Omit<Transaction, 'id'>): void {
     const newTx: Transaction = { ...tx, id: uid() };
     this.transactions.update((list) => [...list, newTx]);
-    void this.repo.addTransaction(newTx);
+    this.repo.addTransaction(newTx).catch((err) =>
+      reportWriteFailure(err, () => this.transactions.update((list) => list.filter((t) => t.id !== newTx.id))),
+    );
   }
 
   update(id: string, patch: Partial<Omit<Transaction, 'id'>>): void {
+    const current = this.transactions().find((t) => t.id === id);
     this.transactions.update((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-    void this.repo.updateTransaction(id, patch);
+    this.repo.updateTransaction(id, patch).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (current) this.transactions.update((list) => list.map((t) => (t.id === id ? current : t)));
+      }),
+    );
   }
 
   remove(id: string): void {
+    const removed = this.transactions().find((t) => t.id === id);
     this.transactions.update((list) => list.filter((t) => t.id !== id));
-    void this.repo.removeTransaction(id);
+    this.repo.removeTransaction(id).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (removed) this.transactions.update((list) => [...list, removed]);
+      }),
+    );
   }
 
   /** Movimenti di un mese: month è 1-based. */
@@ -150,6 +175,164 @@ export class TransactionStore {
 
   inRange(fromIso: string, toIso: string): Transaction[] {
     return this.sorted().filter((t) => t.date >= fromIso && t.date <= toIso);
+  }
+}
+
+/** Ultimo giorno valido del mese (es. dayOfMonth 31 in febbraio -> 28/29). */
+function clampDay(year: number, month1: number, day: number): number {
+  const lastDay = new Date(year, month1, 0).getDate();
+  return Math.min(day, lastDay);
+}
+
+function isoAt(year: number, month1: number, day: number): string {
+  return `${year}-${String(month1).padStart(2, '0')}-${String(clampDay(year, month1, day)).padStart(2, '0')}`;
+}
+
+/** "19º rata di 36" — o "<descrizione> — 19º rata di 36" se la regola ha una descrizione. */
+function formatInstallmentDescription(base: string, index: number, total: number): string {
+  const suffix = `${index}º rata di ${total}`;
+  return base ? `${base} — ${suffix}` : suffix;
+}
+
+/**
+ * Date (in ordine) da generare per una regola, tra l'ultima generata (esclusa, se presente)
+ * e oggi (inclusa). Il giorno di `rule.startDate` non conta: solo l'anno/mese di partenza.
+ */
+function duePeriods(rule: RecurringRule, lastGeneratedIso: string | null, todayIsoStr: string): string[] {
+  const from = isoToDate(lastGeneratedIso ?? rule.startDate);
+  let year = from.getFullYear();
+  let month = from.getMonth() + 1;
+  if (lastGeneratedIso) {
+    month++;
+    if (month > 12) { month = 1; year++; }
+  }
+  const dates: string[] = [];
+  while (dates.length < 1200) {
+    const candidate = isoAt(year, month, rule.dayOfMonth);
+    if (candidate > todayIsoStr) break;
+    dates.push(candidate);
+    month++;
+    if (month > 12) { month = 1; year++; }
+  }
+  return dates;
+}
+
+@Injectable({ providedIn: 'root' })
+export class RecurringStore {
+  private readonly repo = inject(BUDGET_REPOSITORY);
+  private readonly auth = inject(AuthService);
+  private readonly txStore = inject(TransactionStore);
+  readonly rules = signal<RecurringRule[]>([]);
+  readonly ready = signal(false);
+
+  readonly active = computed(() => this.rules().filter((r) => !r.archived));
+
+  constructor() {
+    effect(() => {
+      const ready = this.auth.ready();
+      const user = this.auth.user();
+      if (!ready) return;
+      void this.reload(user);
+    });
+
+    // Non appena regole e movimenti sono pronti, genera una tantum i movimenti mancanti.
+    // `untracked` evita che l'effect si ripeta ad ogni nuovo movimento aggiunto.
+    effect(() => {
+      const rulesReady = this.ready();
+      const txReady = this.txStore.ready();
+      if (rulesReady && txReady) untracked(() => this.generateDue());
+    });
+  }
+
+  private async reload(user: User | null): Promise<void> {
+    this.ready.set(false);
+    if (!user) {
+      this.rules.set([]);
+      this.ready.set(true);
+      return;
+    }
+    const stored = await this.repo.loadRecurringRules();
+    this.rules.set(stored ?? []);
+    this.ready.set(true);
+  }
+
+  byId(id: string): RecurringRule | undefined {
+    return this.rules().find((r) => r.id === id);
+  }
+
+  /** Progresso di un piano a rate: null se la regola è una ricorrenza senza fine. */
+  installmentProgress(rule: RecurringRule): { index: number; total: number } | null {
+    if (rule.startOccurrence == null || rule.totalOccurrences == null) return null;
+    const linked = this.txStore.transactions().filter((t) => t.recurringRuleId === rule.id);
+    const index = Math.min(rule.startOccurrence + Math.max(linked.length - 1, 0), rule.totalOccurrences);
+    return { index, total: rule.totalOccurrences };
+  }
+
+  add(rule: Omit<RecurringRule, 'id'>): void {
+    const newRule: RecurringRule = { ...rule, id: uid() };
+    this.rules.update((list) => [...list, newRule]);
+    this.repo.addRecurringRule(newRule).catch((err) =>
+      reportWriteFailure(err, () => this.rules.update((list) => list.filter((r) => r.id !== newRule.id))),
+    );
+    this.generateDue();
+  }
+
+  setArchived(id: string, archived: boolean): void {
+    const current = this.byId(id);
+    if (!current) return;
+    this.rules.update((list) => list.map((r) => (r.id === id ? { ...r, archived } : r)));
+    this.repo.updateRecurringRule(id, { archived }).catch((err) =>
+      reportWriteFailure(err, () => this.rules.update((list) => list.map((r) => (r.id === id ? current : r)))),
+    );
+  }
+
+  remove(id: string): void {
+    const removed = this.byId(id);
+    this.rules.update((list) => list.filter((r) => r.id !== id));
+    this.repo.removeRecurringRule(id).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (removed) this.rules.update((list) => [...list, removed]);
+      }),
+    );
+  }
+
+  /**
+   * Genera i movimenti dovuti fino a oggi per ogni regola attiva, guardando i movimenti già
+   * collegati a ciascuna regola per capire da dove riprendere. Best-effort lato client: con più
+   * dispositivi aperti nello stesso istante una doppia generazione è in teoria possibile ma
+   * estremamente improbabile per un uso personale, e si autocorregge al giro successivo.
+   */
+  private generateDue(): void {
+    const today = todayIso();
+    for (const rule of this.active()) {
+      const linked = this.txStore.transactions().filter((t) => t.recurringRuleId === rule.id);
+      const lastDate = linked.length ? linked.reduce((m, t) => (t.date > m ? t.date : m), linked[0].date) : null;
+      let dates = duePeriods(rule, lastDate, today);
+
+      const isInstallment = rule.startOccurrence != null && rule.totalOccurrences != null;
+      // Numero di rate che questa regola deve generare in tutto (può iniziare a metà piano).
+      const neededCount = isInstallment ? rule.totalOccurrences! - rule.startOccurrence! + 1 : Infinity;
+      if (isInstallment) dates = dates.slice(0, Math.max(0, neededCount - linked.length));
+
+      let count = linked.length;
+      for (const date of dates) {
+        count++;
+        const description = isInstallment
+          ? formatInstallmentDescription(rule.description, rule.startOccurrence! + count - 1, rule.totalOccurrences!)
+          : rule.description;
+        this.txStore.add({
+          type: rule.type,
+          amount: rule.amount,
+          categoryId: rule.categoryId,
+          subcategoryId: rule.subcategoryId,
+          date,
+          description,
+          recurringRuleId: rule.id,
+        });
+      }
+
+      if (isInstallment && count >= neededCount) this.setArchived(rule.id, true);
+    }
   }
 }
 
@@ -190,26 +373,44 @@ export class PortfolioStore {
   add(asset: Omit<Asset, 'id'>): void {
     const newAsset: Asset = { ...asset, id: uid() };
     this.assets.update((list) => [...list, newAsset]);
-    void this.repo.addAsset(newAsset);
+    this.repo.addAsset(newAsset).catch((err) =>
+      reportWriteFailure(err, () => this.assets.update((list) => list.filter((a) => a.id !== newAsset.id))),
+    );
   }
 
   rename(id: string, name: string): void {
+    const current = this.assets().find((a) => a.id === id);
     this.assets.update((list) => list.map((a) => (a.id === id ? { ...a, name } : a)));
-    void this.repo.updateAsset(id, { name });
+    this.repo.updateAsset(id, { name }).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (current) this.assets.update((list) => list.map((a) => (a.id === id ? current : a)));
+      }),
+    );
   }
 
   setArchived(id: string, archived: boolean): void {
+    const current = this.assets().find((a) => a.id === id);
     this.assets.update((list) => list.map((a) => (a.id === id ? { ...a, archived } : a)));
-    void this.repo.updateAsset(id, { archived });
+    this.repo.updateAsset(id, { archived }).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (current) this.assets.update((list) => list.map((a) => (a.id === id ? current : a)));
+      }),
+    );
   }
 
   remove(id: string): void {
+    const removed = this.assets().find((a) => a.id === id);
     this.assets.update((list) => list.filter((a) => a.id !== id));
-    void this.repo.removeAsset(id);
+    this.repo.removeAsset(id).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (removed) this.assets.update((list) => [...list, removed]);
+      }),
+    );
   }
 
   /** Aggiunge o sostituisce lo snapshot alla data indicata. */
   addSnapshot(assetId: string, snap: AssetSnapshot): void {
+    const current = this.assets().find((a) => a.id === assetId);
     let newSnapshots: AssetSnapshot[] = [];
     this.assets.update((list) =>
       list.map((a) => {
@@ -219,10 +420,15 @@ export class PortfolioStore {
         return { ...a, snapshots: newSnapshots };
       }),
     );
-    void this.repo.updateAsset(assetId, { snapshots: newSnapshots });
+    this.repo.updateAsset(assetId, { snapshots: newSnapshots }).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (current) this.assets.update((list) => list.map((a) => (a.id === assetId ? current : a)));
+      }),
+    );
   }
 
   removeSnapshot(assetId: string, date: string): void {
+    const current = this.assets().find((a) => a.id === assetId);
     let newSnapshots: AssetSnapshot[] = [];
     this.assets.update((list) =>
       list.map((a) => {
@@ -231,7 +437,11 @@ export class PortfolioStore {
         return { ...a, snapshots: newSnapshots };
       }),
     );
-    void this.repo.updateAsset(assetId, { snapshots: newSnapshots });
+    this.repo.updateAsset(assetId, { snapshots: newSnapshots }).catch((err) =>
+      reportWriteFailure(err, () => {
+        if (current) this.assets.update((list) => list.map((a) => (a.id === assetId ? current : a)));
+      }),
+    );
   }
 
   /** Serie storica del patrimonio totale: per ogni data nota, somma degli ultimi valori disponibili. */

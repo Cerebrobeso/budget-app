@@ -9,6 +9,35 @@ export interface Transaction {
   categoryId: string;
   subcategoryId: string | null;
   description: string;
+  /** Regola ricorrente che ha generato questo movimento, null se inserito a mano. */
+  recurringRuleId: string | null;
+}
+
+/**
+ * Regola per generare automaticamente un movimento ogni mese (affitto, abbonamenti, rate...).
+ * La generazione (client-side, in RecurringStore) guarda i movimenti già collegati a `id`
+ * per capire da dove riprendere, quindi non serve un campo "ultima generazione" separato.
+ */
+export interface RecurringRule {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  categoryId: string;
+  subcategoryId: string | null;
+  description: string;
+  /** 1-28: giorno del mese in cui generare il movimento (28 per restare valido in ogni mese). */
+  dayOfMonth: number;
+  /** ISO yyyy-MM-dd: il giorno non conta, solo anno/mese di partenza. */
+  startDate: string;
+  /** In pausa: non genera più nuovi movimenti, ma i vecchi restano. */
+  archived?: boolean;
+  /**
+   * Piano a rate: impostati insieme, la regola genera un numero finito di movimenti e poi
+   * si mette in pausa da sola. `startOccurrence` è la rata da cui riparte questa regola —
+   * utile se le rate precedenti sono già registrate a mano (es. un finanziamento a metà).
+   */
+  startOccurrence?: number;
+  totalOccurrences?: number;
 }
 
 export interface Subcategory {

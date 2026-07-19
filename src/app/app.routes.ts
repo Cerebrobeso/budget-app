@@ -33,6 +33,12 @@ export const routes: Routes = [
     title: 'Patrimonio — Registro',
   },
   {
+    path: 'ricorrenti',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/recurring/recurring-page').then((m) => m.RecurringPage),
+    title: 'Ricorrenti — Registro',
+  },
+  {
     path: '**',
     loadComponent: () => import('./features/not-found/not-found-page').then((m) => m.NotFoundPage),
     title: 'Pagina non trovata — Registro',

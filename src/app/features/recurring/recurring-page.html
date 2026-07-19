@@ -1,0 +1,176 @@
+<h1 class="mb-4 font-display text-2xl font-extrabold">Ricorrenti</h1>
+<p class="mb-4 text-sm text-muted-foreground">
+  Affitto, abbonamenti, rate... imposta una regola e il movimento viene generato da solo, ogni mese, appena apri l'app.
+</p>
+
+<!-- Nuova regola -->
+<div hlmCard class="mb-6 p-4">
+  <div class="mb-3 flex gap-2">
+    <button
+      type="button" hlmBtn variant="outline"
+      [class]="type() === 'expense'
+        ? 'bg-expense hover:bg-expense text-white border-transparent hover:opacity-90'
+        : 'opacity-60 hover:opacity-100'"
+      (click)="setType('expense')"
+    >Uscita</button>
+    <button
+      type="button" hlmBtn variant="outline"
+      [class]="type() === 'income'
+        ? 'bg-income hover:bg-income text-white border-transparent hover:opacity-90'
+        : 'opacity-60 hover:opacity-100'"
+      (click)="setType('income')"
+    >Entrata</button>
+  </div>
+
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div>
+      <label hlmLabel for="rr-amount">Importo</label>
+      <input hlmInput id="rr-amount" type="text" inputmode="decimal" [maskito]="amountMask"
+             [disabled]="type() === null" placeholder="0,00" class="figure text-right"
+             [ngModel]="amountText()" (ngModelChange)="amountText.set($event)" />
+    </div>
+    <div>
+      <label hlmLabel for="rr-day">Giorno del mese</label>
+      <input hlmInput id="rr-day" type="number" min="1" max="28" [disabled]="type() === null"
+             [ngModel]="dayOfMonth()" (ngModelChange)="dayOfMonth.set($event)" />
+    </div>
+  </div>
+
+  <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div>
+      <label hlmLabel for="rr-category">Categoria</label>
+      <div hlmSelect [value]="categoryId()" (valueChange)="onCategoryChange($event)" [disabled]="type() === null" [itemToString]="categoryLabel">
+        <hlm-select-trigger buttonId="rr-category" class="w-full">
+          <span hlmSelectValue placeholder="Scegli categoria"></span>
+        </hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          @for (cat of availableCategories(); track cat.id) {
+            <hlm-select-item [value]="cat.id">{{ cat.name }}</hlm-select-item>
+          }
+        </hlm-select-content>
+      </div>
+    </div>
+    <div>
+      <label hlmLabel for="rr-subcategory">Sottocategoria</label>
+      <div hlmSelect [value]="subcategoryId()" (valueChange)="onSubChange($event)" [disabled]="type() === null || subs().length === 0" [itemToString]="subcategoryLabel">
+        <hlm-select-trigger buttonId="rr-subcategory" class="w-full">
+          <span hlmSelectValue placeholder="—"></span>
+        </hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          @for (sub of subs(); track sub.id) {
+            <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
+          }
+        </hlm-select-content>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div>
+      <label hlmLabel for="rr-desc">Descrizione <span class="normal-case font-normal">(opzionale)</span></label>
+      <input hlmInput id="rr-desc" type="text" [disabled]="type() === null"
+             placeholder="Es. Affitto" [ngModel]="description()" (ngModelChange)="description.set($event)" />
+    </div>
+    <div>
+      <label hlmLabel for="rr-start">A partire da</label>
+      <hlm-date-picker class="w-full" [date]="startDateValue()" [disabled]="type() === null" (dateChange)="onStartDateChange($event)">
+        <hlm-date-picker-trigger buttonId="rr-start" class="w-full" />
+      </hlm-date-picker>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      Piano a rate <span class="normal-case font-normal">(opzionale — lascia vuoto per una ricorrenza senza fine)</span>
+    </label>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label hlmLabel for="rr-start-occ" class="sr-only">Rata di partenza</label>
+        <input hlmInput id="rr-start-occ" type="number" min="1" [disabled]="type() === null"
+               placeholder="Rata di partenza (es. 26)"
+               [ngModel]="startOccurrenceText()" (ngModelChange)="startOccurrenceText.set($event)" />
+      </div>
+      <div>
+        <label hlmLabel for="rr-total-occ" class="sr-only">Totale rate</label>
+        <input hlmInput id="rr-total-occ" type="number" min="1" [disabled]="type() === null"
+               placeholder="Totale rate (es. 36)"
+               [ngModel]="totalOccurrencesText()" (ngModelChange)="totalOccurrencesText.set($event)" />
+      </div>
+    </div>
+  </div>
+
+  <button hlmBtn class="mt-4" [disabled]="!type() || !categoryId() || !amountText()" (click)="add()">
+    Aggiungi regola
+  </button>
+</div>
+
+<div hlmTabs tab="attive">
+  <div hlmTabsList class="mb-4 rounded-full border border-border bg-surface p-1" aria-label="Stato regole">
+    <button hlmTabsTrigger="attive" class="rounded-full">Attive</button>
+    <button hlmTabsTrigger="pausa" class="rounded-full">In pausa</button>
+  </div>
+
+  <div hlmTabsContent="attive">
+    @if (store.active().length === 0) {
+      <div hlmCard class="p-8 text-center text-muted-foreground">Nessuna regola ricorrente attiva.</div>
+    }
+    @for (rule of store.active(); track rule.id) {
+      <div hlmCard class="mb-3 flex flex-wrap items-center gap-3 p-4">
+        <span class="size-3 shrink-0 rounded-full" [style.background]="catStore.color(rule.categoryId)"></span>
+        <div class="min-w-0 flex-1">
+          <div class="font-medium">
+            {{ rule.description || categoryName(rule.categoryId) }}
+          </div>
+          <div class="text-sm text-muted-foreground">
+            {{ categoryName(rule.categoryId) }}{{ subcategoryName(rule) ? ' · ' + subcategoryName(rule) : '' }}
+            · ogni mese il {{ rule.dayOfMonth }}
+            @if (progress(rule); as p) {
+              · Rata {{ p.index }}/{{ p.total }}
+            }
+          </div>
+        </div>
+        <div class="figure shrink-0 font-semibold"
+             [class.text-income]="rule.type === 'income'" [class.text-expense]="rule.type === 'expense'">
+          {{ rule.type === 'income' ? '+' : '−' }}{{ fmt(rule.amount) }}
+        </div>
+        <div class="flex shrink-0 gap-1">
+          <button hlmBtn variant="ghost" size="icon" aria-label="Metti in pausa" (click)="store.setArchived(rule.id, true)">
+            <ng-icon name="lucidePause" size="16" />
+          </button>
+          <button hlmBtn variant="ghost" size="icon" class="text-expense" aria-label="Elimina regola" (click)="store.remove(rule.id)">
+            <ng-icon name="lucideTrash2" size="16" />
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div hlmTabsContent="pausa">
+    @if (archived().length === 0) {
+      <div hlmCard class="p-8 text-center text-muted-foreground">Nessuna regola in pausa.</div>
+    }
+    @for (rule of archived(); track rule.id) {
+      <div hlmCard class="mb-3 flex flex-wrap items-center gap-3 p-4 opacity-70">
+        <span class="size-3 shrink-0 rounded-full" [style.background]="catStore.color(rule.categoryId)"></span>
+        <div class="min-w-0 flex-1">
+          <div class="font-medium">{{ rule.description || categoryName(rule.categoryId) }}</div>
+          <div class="text-sm text-muted-foreground">
+            {{ categoryName(rule.categoryId) }} · ogni mese il {{ rule.dayOfMonth }}
+            @if (progress(rule); as p) {
+              · Rata {{ p.index }}/{{ p.total }}
+            }
+            · {{ archivedLabel(rule) }}
+          </div>
+        </div>
+        <div class="flex shrink-0 gap-1">
+          <button hlmBtn variant="ghost" size="icon" aria-label="Riattiva" (click)="store.setArchived(rule.id, false)">
+            <ng-icon name="lucidePlay" size="16" />
+          </button>
+          <button hlmBtn variant="ghost" size="icon" class="text-expense" aria-label="Elimina regola" (click)="store.remove(rule.id)">
+            <ng-icon name="lucideTrash2" size="16" />
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

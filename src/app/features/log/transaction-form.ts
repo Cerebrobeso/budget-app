@@ -127,6 +127,7 @@ export class TransactionForm {
       return;
     }
     this.error.set('');
+    const existing = this.transaction();
     const payload = {
       amount: Math.round(amount * 100) / 100,
       type,
@@ -134,8 +135,8 @@ export class TransactionForm {
       subcategoryId: this.subcategoryId(),
       date: this.date(),
       description: this.description().trim(),
+      recurringRuleId: existing?.recurringRuleId ?? null,
     };
-    const existing = this.transaction();
     if (existing) {
       this.txStore.update(existing.id, payload);
     } else {
