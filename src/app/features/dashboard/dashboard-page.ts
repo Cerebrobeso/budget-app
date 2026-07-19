@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective } from 'ngx-echarts';
-import type { EChartsCoreOption } from 'echarts';
+import type { ECElementEvent, EChartsCoreOption } from 'echarts';
 import { CategoryStore, ThemeService, TransactionStore } from '../../core/stores';
 import { MONTHS_SHORT, dateToIso, eur, formatDateItalian, isoToDate } from '../../core/format';
 import { todayIso } from '../../core/models';
@@ -134,7 +134,15 @@ export class DashboardPage {
     };
   });
 
-  private readonly byCategory = computed(() => {
+  /** Categoria di uscita attualmente aperta nel donut; null = vista per categorie. */
+  readonly selectedCategoryId = signal<string | null>(null);
+
+  readonly selectedCategoryName = computed(() => {
+    const id = this.selectedCategoryId();
+    return id ? (this.catStore.byId(id)?.name ?? id) : null;
+  });
+
+  private readonly categoryTotals = computed(() => {
     const totals = new Map<string, number>();
     for (const tx of this.inRange()) {
       if (tx.type !== 'expense') continue;
@@ -142,6 +150,7 @@ export class DashboardPage {
     }
     return [...totals.entries()]
       .map(([id, value]) => ({
+        id,
         name: this.catStore.byId(id)?.name ?? id,
         value: round2(value),
         itemStyle: { color: this.catStore.color(id) },
@@ -149,7 +158,54 @@ export class DashboardPage {
       .sort((a, b) => b.value - a.value);
   });
 
-  readonly donutTotal = computed(() => this.byCategory().reduce((s, x) => s + x.value, 0));
+  /** Uscite della categoria selezionata, per sottocategoria (tinte derivate dal colore della categoria). */
+  private readonly subcategoryTotals = computed(() => {
+    const categoryId = this.selectedCategoryId();
+    if (!categoryId) return [];
+    const category = this.catStore.byId(categoryId);
+    const baseColor = category?.color ?? '#6B6F68';
+    const totals = new Map<string, number>();
+    for (const tx of this.inRange()) {
+      if (tx.type !== 'expense' || tx.categoryId !== categoryId) continue;
+      const key = tx.subcategoryId ?? '__none__';
+      totals.set(key, (totals.get(key) ?? 0) + tx.amount);
+    }
+    return [...totals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([subId, value], i) => ({
+        id: subId,
+        name:
+          subId === '__none__'
+            ? 'Senza sottocategoria'
+            : (category?.subcategories.find((s) => s.id === subId)?.name ?? subId),
+        value: round2(value),
+        itemStyle: { color: tint(baseColor, i * 0.14) },
+      }));
+  });
+
+  private readonly donutData = computed(() =>
+    this.selectedCategoryId() ? this.subcategoryTotals() : this.categoryTotals(),
+  );
+
+  readonly donutTotal = computed(() => this.donutData().reduce((s, x) => s + x.value, 0));
+
+  /** Click su una voce della legenda del donut: apre il dettaglio per sottocategoria. */
+  onDonutLegendClick(name: string): void {
+    if (this.selectedCategoryId()) return;
+    const match = this.categoryTotals().find((c) => c.name === name);
+    if (match) this.selectedCategoryId.set(match.id);
+  }
+
+  /** Click su una fetta del donut: stesso drill-down del click in legenda. */
+  onDonutSliceClick(event: ECElementEvent): void {
+    if (this.selectedCategoryId() || event.componentType !== 'series') return;
+    const id = (event.data as { id?: string } | null)?.id;
+    if (id) this.selectedCategoryId.set(id);
+  }
+
+  backToCategories(): void {
+    this.selectedCategoryId.set(null);
+  }
 
   readonly donutOptions = computed<EChartsCoreOption>(() => {
     const c = this.axisColors();
@@ -170,7 +226,7 @@ export class DashboardPage {
           textBorderWidth: 2,
         },
         labelLine: { show: false },
-        data: this.byCategory(),
+        data: this.donutData(),
       }],
     };
   });
@@ -204,4 +260,14 @@ export class DashboardPage {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/** Schiarisce un colore esadecimale verso il bianco di `factor` (0..1), per tinte di sottocategoria. */
+function tint(hex: string, factor: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * Math.min(factor, 0.85));
+  return `#${[mix(r), mix(g), mix(b)].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
 }
