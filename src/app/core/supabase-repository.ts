@@ -1,8 +1,6 @@
-import { Injectable, effect, inject } from '@angular/core';
-import { AuthService } from './auth.service';
+import { Injectable } from '@angular/core';
 import { Asset, Category, Transaction } from './models';
 import { BudgetRepository } from './repository';
-import { SEED_ASSETS, SEED_CATEGORIES, SEED_TRANSACTIONS } from './seed-data';
 import { supabase } from './supabase.client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -105,51 +103,7 @@ function assetPatchToRow(patch: Partial<Omit<Asset, 'id'>>): Record<string, unkn
  */
 @Injectable()
 export class SupabaseBudgetRepository implements BudgetRepository {
-  private readonly auth = inject(AuthService);
-  private seedPromise: Promise<void> | null = null;
-
-  constructor() {
-    // Un cambio utente (login/logout/switch account) invalida il check di seeding
-    // già fatto, così un secondo utente sullo stesso browser viene seedato a sua volta.
-    effect(() => {
-      this.auth.user();
-      this.seedPromise = null;
-    });
-  }
-
-  private ensureSeeded(): Promise<void> {
-    if (!this.seedPromise) {
-      this.seedPromise = this.doEnsureSeeded();
-    }
-    return this.seedPromise;
-  }
-
-  /** Importa una tantum i dati di seed se l'account risulta completamente vuoto. */
-  private async doEnsureSeeded(): Promise<void> {
-    const userId = this.auth.user()?.id;
-    if (!userId) return;
-    const flagKey = `registro.seeded.${userId}`;
-    if (localStorage.getItem(flagKey)) return;
-
-    const [categories, transactions, assets] = await Promise.all([
-      supabase.from('categories').select('id', { count: 'exact', head: true }),
-      supabase.from('transactions').select('id', { count: 'exact', head: true }),
-      supabase.from('assets').select('id', { count: 'exact', head: true }),
-    ]);
-
-    const isEmpty = !categories.count && !transactions.count && !assets.count;
-    if (isEmpty) {
-      await Promise.all([
-        supabase.from('categories').insert(SEED_CATEGORIES.map(catToRow)),
-        supabase.from('transactions').insert(SEED_TRANSACTIONS.map(txToRow)),
-        supabase.from('assets').insert(SEED_ASSETS.map(assetToRow)),
-      ]);
-    }
-    localStorage.setItem(flagKey, '1');
-  }
-
   async loadTransactions(): Promise<Transaction[] | null> {
-    await this.ensureSeeded();
     const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: true });
     if (error || !data) return null;
     return data.map(rowToTx);
@@ -165,7 +119,6 @@ export class SupabaseBudgetRepository implements BudgetRepository {
   }
 
   async loadCategories(): Promise<Category[] | null> {
-    await this.ensureSeeded();
     const { data, error } = await supabase.from('categories').select('*');
     if (error || !data) return null;
     return data.map(rowToCat);
@@ -178,7 +131,6 @@ export class SupabaseBudgetRepository implements BudgetRepository {
   }
 
   async loadAssets(): Promise<Asset[] | null> {
-    await this.ensureSeeded();
     const { data, error } = await supabase.from('assets').select('*');
     if (error || !data) return null;
     return data.map(rowToAsset);
