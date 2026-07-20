@@ -56,7 +56,7 @@
 }
 
 <!-- Filtri categoria / sottocategoria -->
-<div class="mb-4 flex gap-2">
+<div class="mb-4 flex flex-wrap gap-2">
   <div hlmSelect [value]="filterCategory()" (valueChange)="onFilterCategory($event)" [itemToString]="categoryLabel">
     <label hlmLabel class="sr-only" for="filter-category">Filtra per categoria</label>
     <hlm-select-trigger buttonId="filter-category">
