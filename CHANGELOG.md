@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-20
+
+### Added
+- Tooltips on desktop for icon-only buttons throughout the app.
+- Visible state label (Imprevisto/Programmata/Normale) on the transaction tag-cycle button, alongside a matching icon for each state.
+
+### Changed
+- Mobile transaction log: filter controls now wrap into a 2-column grid instead of an uneven line wrap, and per-transaction action buttons (tag/edit/delete) move to their own row instead of crowding the description text.
+
+### Fixed
+- Bottom navigation bar not staying pinned to the viewport on some Android phones, caused by unwrapped filter controls overflowing the screen width.
+
 ## [1.1.0] - 2026-07-19
 
 ### Added
