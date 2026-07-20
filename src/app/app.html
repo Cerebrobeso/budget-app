@@ -24,14 +24,16 @@
             >{{ link.label }}</a>
           }
         </nav>
-        <button hlmBtn variant="outline" size="icon" (click)="exportBackup()" aria-label="Backup dati (JSON)">
+        <button hlmBtn variant="outline" size="icon" (click)="exportBackup()" aria-label="Backup dati (JSON)"
+                hlmTooltip="Backup dati (JSON)">
           <ng-icon name="lucideDownload" />
         </button>
         <button hlmBtn variant="outline" size="icon" (click)="theme.toggle()"
-                [attr.aria-label]="theme.dark() ? 'Passa al tema chiaro' : 'Passa al tema scuro'">
+                [attr.aria-label]="theme.dark() ? 'Passa al tema chiaro' : 'Passa al tema scuro'"
+                [hlmTooltip]="theme.dark() ? 'Passa al tema chiaro' : 'Passa al tema scuro'">
           @if (theme.dark()) { <ng-icon name="lucideSun" /> } @else { <ng-icon name="lucideMoon" /> }
         </button>
-        <button hlmBtn variant="outline" size="icon" (click)="logout()" aria-label="Esci"><ng-icon name="lucideLogOut" /></button>
+        <button hlmBtn variant="outline" size="icon" (click)="logout()" aria-label="Esci" hlmTooltip="Esci"><ng-icon name="lucideLogOut" /></button>
         <button hlmBtn class="hidden md:inline-flex font-semibold" (click)="openQuickAdd()">
           <ng-icon name="lucidePlus" class="mr-1" /> Nuovo <kbd class="figure ml-1 rounded bg-black/15 px-1.5 text-xs">N</kbd>
         </button>

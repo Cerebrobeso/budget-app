@@ -12,6 +12,7 @@ import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmTabsImports } from '@spartan-ng/helm/tabs';
+import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 
 @Component({
   selector: 'app-categories-page',
@@ -27,6 +28,7 @@ import { HlmTabsImports } from '@spartan-ng/helm/tabs';
     ...HlmTabsImports,
     ...HlmDialogImports,
     ...HlmSelectImports,
+    ...HlmTooltipImports,
   ],
   providers: [provideIcons({ lucidePencil, lucidePlus, lucideTrash2, lucideX })],
   templateUrl: './categories-page.html',

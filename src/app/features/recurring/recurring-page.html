@@ -134,10 +134,10 @@
           {{ rule.type === 'income' ? '+' : '−' }}{{ fmt(rule.amount) }}
         </div>
         <div class="flex shrink-0 gap-1">
-          <button hlmBtn variant="ghost" size="icon" aria-label="Metti in pausa" (click)="store.setArchived(rule.id, true)">
+          <button hlmBtn variant="ghost" size="icon" aria-label="Metti in pausa" hlmTooltip="Metti in pausa" (click)="store.setArchived(rule.id, true)">
             <ng-icon name="lucidePause" size="16" />
           </button>
-          <button hlmBtn variant="ghost" size="icon" class="text-expense" aria-label="Elimina regola" (click)="store.remove(rule.id)">
+          <button hlmBtn variant="ghost" size="icon" class="text-expense" aria-label="Elimina regola" hlmTooltip="Elimina regola" (click)="store.remove(rule.id)">
             <ng-icon name="lucideTrash2" size="16" />
           </button>
         </div>
@@ -163,10 +163,10 @@
           </div>
         </div>
         <div class="flex shrink-0 gap-1">
-          <button hlmBtn variant="ghost" size="icon" aria-label="Riattiva" (click)="store.setArchived(rule.id, false)">
+          <button hlmBtn variant="ghost" size="icon" aria-label="Riattiva" hlmTooltip="Riattiva" (click)="store.setArchived(rule.id, false)">
             <ng-icon name="lucidePlay" size="16" />
           </button>
-          <button hlmBtn variant="ghost" size="icon" class="text-expense" aria-label="Elimina regola" (click)="store.remove(rule.id)">
+          <button hlmBtn variant="ghost" size="icon" class="text-expense" aria-label="Elimina regola" hlmTooltip="Elimina regola" (click)="store.remove(rule.id)">
             <ng-icon name="lucideTrash2" size="16" />
           </button>
         </div>

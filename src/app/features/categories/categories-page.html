@@ -58,7 +58,8 @@
             @if (!cat.shared) {
               <button hlmBtn variant="ghost" size="sm" (click)="startEditCat(cat)">Rinomina</button>
               <button hlmBtn variant="ghost" size="sm" class="text-muted-foreground" (click)="store.setArchived(cat.id, true)">Archivia</button>
-              <button hlmBtn variant="ghost" size="sm" class="text-expense" [attr.aria-label]="'Elimina ' + cat.name" (click)="askDeleteCat(cat)">
+              <button hlmBtn variant="ghost" size="sm" class="text-expense" [attr.aria-label]="'Elimina ' + cat.name"
+                      hlmTooltip="Elimina" (click)="askDeleteCat(cat)">
                 <ng-icon name="lucideTrash2" size="14" />
               </button>
             }
@@ -79,9 +80,9 @@
                   {{ sub.name }}
                   @if (!cat.shared || sub.overlay) {
                     <button class="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
-                            [attr.aria-label]="'Rinomina ' + sub.name" (click)="startEditSub(cat, sub)"><ng-icon name="lucidePencil" size="13" /></button>
+                            [attr.aria-label]="'Rinomina ' + sub.name" hlmTooltip="Rinomina" (click)="startEditSub(cat, sub)"><ng-icon name="lucidePencil" size="13" /></button>
                     <button class="cursor-pointer text-muted-foreground hover:text-expense"
-                            [attr.aria-label]="'Archivia ' + sub.name" (click)="store.setSubArchived(cat.id, sub.id, true)"><ng-icon name="lucideX" size="13" /></button>
+                            [attr.aria-label]="'Archivia ' + sub.name" hlmTooltip="Archivia" (click)="store.setSubArchived(cat.id, sub.id, true)"><ng-icon name="lucideX" size="13" /></button>
                   }
                 }
               </li>

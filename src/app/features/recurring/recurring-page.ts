@@ -19,6 +19,7 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmTabsImports } from '@spartan-ng/helm/tabs';
+import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 
 @Component({
   selector: 'app-recurring-page',
@@ -34,6 +35,7 @@ import { HlmTabsImports } from '@spartan-ng/helm/tabs';
     ...HlmSelectImports,
     ...HlmDatePickerImports,
     ...HlmTabsImports,
+    ...HlmTooltipImports,
   ],
   providers: [provideIcons({ lucidePlay, lucidePause, lucideTrash2 })],
   templateUrl: './recurring-page.html',

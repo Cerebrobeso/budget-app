@@ -79,7 +79,7 @@
       <button hlmBtn variant="ghost" size="sm" class="ml-auto text-muted-foreground"
               (click)="store.setArchived(asset.id, true)">Archivia</button>
       <button hlmBtn variant="ghost" size="sm" class="text-expense" [attr.aria-label]="'Elimina ' + asset.name"
-              (click)="askDeleteAsset(asset)"><ng-icon name="lucideTrash2" size="14" /></button>
+              hlmTooltip="Elimina" (click)="askDeleteAsset(asset)"><ng-icon name="lucideTrash2" size="14" /></button>
     </div>
     @if (expanded() === asset.id) {
       <table class="mt-3 w-full text-sm">
@@ -98,6 +98,7 @@
               <td class="py-1.5 text-right">
                 <button class="cursor-pointer text-muted-foreground hover:text-expense"
                         [attr.aria-label]="'Elimina snapshot del ' + fmtDate(snap.date)"
+                        hlmTooltip="Elimina snapshot"
                         (click)="store.removeSnapshot(asset.id, snap.date)"><ng-icon name="lucideX" size="14" /></button>
               </td>
             </tr>
@@ -115,7 +116,7 @@
         {{ asset.name }}
         <button hlmBtn variant="outline" size="sm" class="ml-auto" (click)="store.setArchived(asset.id, false)">Ripristina</button>
         <button hlmBtn variant="ghost" size="sm" class="text-expense" [attr.aria-label]="'Elimina ' + asset.name"
-                (click)="askDeleteAsset(asset)"><ng-icon name="lucideTrash2" size="14" /></button>
+                hlmTooltip="Elimina" (click)="askDeleteAsset(asset)"><ng-icon name="lucideTrash2" size="14" /></button>
       </div>
     }
   </details>

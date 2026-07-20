@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTrash2, lucideTriangleAlert, lucideX } from '@ng-icons/lucide';
+import { lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideX } from '@ng-icons/lucide';
 import { Transaction, TransactionTag, TRANSACTION_TAG_LABEL, TRANSFER_CATEGORY_ID, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { MONTHS_LONG, MONTHS_SHORT, eur, eurSigned, formatDayLabel } from '../../core/format';
@@ -12,6 +12,7 @@ import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { TransactionForm } from './transaction-form';
 import {DatePipe} from '@angular/common';
 
@@ -34,10 +35,11 @@ interface DayGroup {
     TransactionForm,
     ...HlmDialogImports,
     ...HlmSelectImports,
+    ...HlmTooltipImports,
     DatePipe
   ],
   providers: [
-    provideIcons({ lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTrash2, lucideTriangleAlert, lucideX }),
+    provideIcons({ lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideX }),
   ],
   templateUrl: './log-page.html',
   styleUrl: './log-page.css',
@@ -142,6 +144,12 @@ export class LogPage {
     const next: TransactionTag | null = tx.tag === null ? 'unexpected' : tx.tag === 'unexpected' ? 'planned' : null;
     this.txStore.update(tx.id, { tag: next });
   }
+
+  protected readonly tagLabel = (tag: TransactionTag | null): string => (tag ? TRANSACTION_TAG_LABEL[tag] : 'Normale');
+
+  /** Testo del tooltip sul pulsante che fa scorrere l'etichetta: descrive l'azione (stato successivo), non lo stato attuale. */
+  protected readonly nextTagActionLabel = (tag: TransactionTag | null): string =>
+    tag === 'unexpected' ? 'Segna come programmata' : tag === 'planned' ? 'Rimuovi etichetta' : 'Segna come imprevisto';
 
   protected readonly categoryLabel = (id: string): string =>
     id === '__all__' ? 'Tutte le categorie' : (this.catStore.byId(id)?.name ?? id);

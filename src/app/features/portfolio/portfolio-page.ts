@@ -16,6 +16,7 @@ import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 
 @Component({
   selector: 'app-portfolio-page',
@@ -32,6 +33,7 @@ import { HlmSelectImports } from '@spartan-ng/helm/select';
     ...HlmDialogImports,
     ...HlmSelectImports,
     ...HlmDatePickerImports,
+    ...HlmTooltipImports,
   ],
   providers: [provideIcons({ lucidePlus, lucideTrash2, lucideTriangleAlert, lucideX })],
   templateUrl: './portfolio-page.html',

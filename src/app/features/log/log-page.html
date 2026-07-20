@@ -1,7 +1,7 @@
 <!-- Timbro del mese: il saldo come split di gara -->
 <section hlmCard class="mb-4 overflow-hidden" style="--card-spacing: 0;">
   <div class="flex items-center justify-between border-b border-border px-4 py-3">
-    <button hlmBtn variant="ghost" size="icon" aria-label="Mese precedente" (click)="shiftMonth(-1)">
+    <button hlmBtn variant="ghost" size="icon" aria-label="Mese precedente" hlmTooltip="Mese precedente" (click)="shiftMonth(-1)">
       <ng-icon name="lucideChevronLeft" />
     </button>
     <div class="text-center">
@@ -10,7 +10,7 @@
       </div>
       <div class="text-xs uppercase tracking-widest text-muted-foreground">{{ monthLong() }} {{ year() }}</div>
     </div>
-    <button hlmBtn variant="ghost" size="icon" aria-label="Mese successivo" (click)="shiftMonth(1)">
+    <button hlmBtn variant="ghost" size="icon" aria-label="Mese successivo" hlmTooltip="Mese successivo" (click)="shiftMonth(1)">
       <ng-icon name="lucideChevronRight" />
     </button>
   </div>
@@ -42,12 +42,12 @@
            class="pl-9" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     @if (search()) {
       <button hlmBtn variant="ghost" size="icon" class="absolute right-1 top-1/2 !size-7 -translate-y-1/2"
-              aria-label="Cancella ricerca" (click)="search.set('')">
+              aria-label="Cancella ricerca" hlmTooltip="Cancella ricerca" (click)="search.set('')">
         <ng-icon name="lucideX" size="14" />
       </button>
     }
   </div>
-  <button hlmBtn variant="outline" size="icon" aria-label="Esporta CSV" (click)="exportCsv()">
+  <button hlmBtn variant="outline" size="icon" aria-label="Esporta CSV" hlmTooltip="Esporta CSV" (click)="exportCsv()">
     <ng-icon name="lucideDownload" size="16" />
   </button>
 </div>
@@ -56,10 +56,10 @@
 }
 
 <!-- Filtri categoria / sottocategoria -->
-<div class="mb-4 flex flex-wrap gap-2">
-  <div hlmSelect [value]="filterCategory()" (valueChange)="onFilterCategory($event)" [itemToString]="categoryLabel">
+<div class="mb-4 grid grid-cols-2 gap-2 md:flex md:flex-wrap">
+  <div hlmSelect class="w-full md:w-auto" [value]="filterCategory()" (valueChange)="onFilterCategory($event)" [itemToString]="categoryLabel">
     <label hlmLabel class="sr-only" for="filter-category">Filtra per categoria</label>
-    <hlm-select-trigger buttonId="filter-category">
+    <hlm-select-trigger buttonId="filter-category" class="w-full md:w-auto">
       <span hlmSelectValue placeholder="Tutte le categorie"></span>
     </hlm-select-trigger>
     <hlm-select-content *hlmSelectPortal>
@@ -72,9 +72,9 @@
       }
     </hlm-select-content>
   </div>
-  <div hlmSelect [value]="filterSub()" (valueChange)="onFilterSub($event)" [disabled]="filterCategory() === '__all__'" [itemToString]="subcategoryLabel">
+  <div hlmSelect class="w-full md:w-auto" [value]="filterSub()" (valueChange)="onFilterSub($event)" [disabled]="filterCategory() === '__all__'" [itemToString]="subcategoryLabel">
     <label hlmLabel class="sr-only" for="filter-subcategory">Filtra per sottocategoria</label>
-    <hlm-select-trigger buttonId="filter-subcategory">
+    <hlm-select-trigger buttonId="filter-subcategory" class="w-full md:w-auto">
       <span hlmSelectValue placeholder="Tutte le sottocategorie"></span>
     </hlm-select-trigger>
     <hlm-select-content *hlmSelectPortal>
@@ -84,13 +84,15 @@
       }
     </hlm-select-content>
   </div>
-  <button hlmBtn size="sm" [variant]="filterTag() === 'unexpected' ? 'default' : 'outline'"
-          [class]="filterTag() === 'unexpected' ? 'bg-expense hover:bg-expense text-white border-transparent' : ''"
+  <button hlmBtn size="sm" class="w-full md:w-auto" [variant]="filterTag() === 'unexpected' ? 'default' : 'outline'"
+          [class.bg-expense]="filterTag() === 'unexpected'" [class.hover:bg-expense]="filterTag() === 'unexpected'"
+          [class.text-white]="filterTag() === 'unexpected'" [class.border-transparent]="filterTag() === 'unexpected'"
           (click)="setFilterTag('unexpected')">
     <ng-icon name="lucideTriangleAlert" class="mr-1" size="14" /> Solo imprevisti
   </button>
-  <button hlmBtn size="sm" [variant]="filterTag() === 'planned' ? 'default' : 'outline'"
-          [class]="filterTag() === 'planned' ? 'bg-primary hover:bg-primary text-primary-foreground border-transparent' : ''"
+  <button hlmBtn size="sm" class="w-full md:w-auto" [variant]="filterTag() === 'planned' ? 'default' : 'outline'"
+          [class.bg-primary]="filterTag() === 'planned'" [class.hover:bg-primary]="filterTag() === 'planned'"
+          [class.text-primary-foreground]="filterTag() === 'planned'" [class.border-transparent]="filterTag() === 'planned'"
           (click)="setFilterTag('planned')">
     <ng-icon name="lucideCalendarDays" class="mr-1" size="14" /> Solo programmate
   </button>
@@ -111,7 +113,7 @@
       </div>
       <div hlmCard class="divide-y divide-border" style="--card-spacing: 0;">
         @for (tx of group.items; track tx.id) {
-          <div class="flex items-center gap-3 px-4 py-3.5"
+          <div class="flex flex-wrap items-center gap-3 px-4 py-3.5 md:flex-nowrap"
                [class.bg-expense-soft]="tx.tag === 'unexpected'" [class.bg-accent-soft]="tx.tag === 'planned'">
             <span class="size-2.5 shrink-0 rounded-full" [style.background]="catStore.color(tx.categoryId)"
                   [attr.aria-hidden]="true"></span>
@@ -134,20 +136,25 @@
                  [class.text-income]="tx.type === 'income'" [class.text-expense]="tx.type === 'expense'">
               {{ tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : '' }}{{ fmt(tx.amount) }}
             </div>
-            <div class="flex shrink-0 gap-1">
-              <button hlmBtn variant="ghost" size="icon"
+            <div class="flex basis-full items-center justify-end gap-1 md:basis-auto md:w-auto md:shrink-0">
+              <button hlmBtn variant="ghost" size="sm"
                       [class.text-expense]="tx.tag === 'unexpected'" [class.text-primary]="tx.tag === 'planned'"
                       [class.text-muted-foreground]="!tx.tag"
                       [attr.aria-pressed]="!!tx.tag"
-                      [attr.aria-label]="tx.tag === 'unexpected' ? 'Segna come programmata' : tx.tag === 'planned' ? 'Rimuovi etichetta' : 'Segna come imprevisto'"
+                      [attr.aria-label]="nextTagActionLabel(tx.tag)"
+                      [hlmTooltip]="nextTagActionLabel(tx.tag)"
                       (click)="cycleTag(tx)">
-                <ng-icon [name]="tx.tag === 'planned' ? 'lucideCalendarDays' : 'lucideTriangleAlert'" size="16" />
+                <ng-icon [name]="tx.tag === 'planned' ? 'lucideCalendarDays' : tx.tag === 'unexpected' ? 'lucideTriangleAlert' : 'lucideTag'"
+                         size="16" class="mr-1" />
+                {{ tagLabel(tx.tag) }}
               </button>
               <button hlmBtn variant="ghost" size="icon"
                       [attr.aria-label]="'Modifica ' + (tx.description || 'movimento')"
+                      hlmTooltip="Modifica"
                       (click)="startEdit(tx)"><ng-icon name="lucidePencil" size="16" /></button>
               <button hlmBtn variant="ghost" size="icon" class="text-expense"
                       [attr.aria-label]="'Elimina ' + (tx.description || 'movimento')"
+                      hlmTooltip="Elimina"
                       (click)="askDelete(tx)"><ng-icon name="lucideTrash2" size="16" /></button>
             </div>
           </div>

@@ -33,6 +33,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmSpinner } from '@spartan-ng/helm/spinner';
 import { HlmToasterImports } from '@spartan-ng/helm/sonner';
+import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { TransactionForm } from './features/log/transaction-form';
 
 @Component({
@@ -48,6 +49,7 @@ import { TransactionForm } from './features/log/transaction-form';
     TransactionForm,
     ...HlmDialogImports,
     ...HlmToasterImports,
+    ...HlmTooltipImports,
   ],
   providers: [
     provideIcons({
