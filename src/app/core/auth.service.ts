@@ -24,7 +24,14 @@ export class AuthService {
     });
 
     supabase.auth.onAuthStateChange((_event, session) => {
-      this.user.set(session?.user ?? null);
+      const nextUser = session?.user ?? null;
+      // Al rientro in tab supabase-js rivalida la sessione e spara un TOKEN_REFRESHED
+      // con un oggetto `user` nuovo ma stesso id: aggiorniamo il signal solo se l'utente
+      // è davvero cambiato (login/logout), altrimenti gli store che osservano `user()`
+      // (stores.ts) ripartirebbero con un reload completo dei dati a ogni cambio tab.
+      if (nextUser?.id !== this.user()?.id) {
+        this.user.set(nextUser);
+      }
       this.ready.set(true);
       this.lastVerifiedAt = Date.now();
     });
