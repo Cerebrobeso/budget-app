@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-21
+
+### Fixed
+- Quick-add and other dialogs on mobile: a dead gap between the title and the form, caused by the dialog's full-height grid stretching every row instead of just the last one.
+- Log page's empty-state message breaking into disjointed lines on mobile, and its "Premi N" keyboard-shortcut hint (meaningless with no physical keyboard) replaced with "Tocca il tasto" on mobile.
+- Tooltips on icon-only buttons getting stuck open after a tap on mobile, with no hover to dismiss them; now desktop-only.
+- Dialog titles with long interpolated names (delete-category/asset confirmations) running under the close button; long titles now wrap instead of overlapping.
+
 ## [1.2.0] - 2026-07-20
 
 ### Added

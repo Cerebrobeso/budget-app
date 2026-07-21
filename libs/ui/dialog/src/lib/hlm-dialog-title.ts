@@ -9,6 +9,8 @@ import { classes } from '@spartan-ng/helm/utils';
 })
 export class HlmDialogTitle {
 	constructor() {
-		classes(() => 'text-base leading-none font-medium');
+		// Reserve room for hlm-dialog-content's absolutely-positioned close button (end-3/top-3 on
+		// mobile, md:end-2/md:top-2 md:size-8) so a long interpolated title never runs under it.
+		classes(() => 'text-base leading-none font-medium pr-12 md:pr-10');
 	}
 }
