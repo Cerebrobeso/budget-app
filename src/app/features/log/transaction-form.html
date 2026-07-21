@@ -1,4 +1,5 @@
-<form class="flex flex-col gap-4" (submit)="$event.preventDefault(); save()">
+<form class="flex h-full min-h-0 flex-col gap-4" (submit)="$event.preventDefault(); save()">
+  <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
   <!-- Importo: il campo protagonista -->
   <div>
     <label hlmLabel for="tx-amount">Importo</label>
@@ -141,8 +142,9 @@
   @if (error()) {
     <p class="text-sm text-expense" role="alert">{{ error() }}</p>
   }
+  </div>
 
-  <button hlmBtn size="lg" type="submit" class="w-full font-display font-bold">
+  <button hlmBtn size="lg" type="submit" class="w-full shrink-0 font-display font-bold">
     {{ editing() ? 'Salva modifiche' : 'Aggiungi movimento' }}
   </button>
 </form>

@@ -82,9 +82,13 @@
 
   <!-- Dialog inserimento rapido, disponibile ovunque -->
   <hlm-dialog #quickAdd="hlmDialog" closeDelay="100">
-    <hlm-dialog-content *hlmDialogPortal>
+    <hlm-dialog-content
+      *hlmDialogPortal
+      class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col overflow-hidden rounded-none
+             md:relative md:inset-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-full md:max-w-sm md:rounded-xl"
+    >
       <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Nuovo movimento</h2>
-      <app-transaction-form (saved)="quickAdd.close({})" />
+      <app-transaction-form class="flex min-h-0 flex-1 flex-col" (saved)="quickAdd.close({})" />
     </hlm-dialog-content>
   </hlm-dialog>
 } @else {
