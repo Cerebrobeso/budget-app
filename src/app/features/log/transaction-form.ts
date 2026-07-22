@@ -19,6 +19,8 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 
+let formIdSeq = 0;
+
 /**
  * Inserimento rapido: importo prima di tutto, tipo a due tasti,
  * categoria/sottocategoria, data (default oggi), descrizione opzionale.
@@ -34,6 +36,11 @@ import { HlmSelectImports } from '@spartan-ng/helm/select';
 export class TransactionForm {
   private readonly txStore = inject(TransactionStore);
   private readonly catStore = inject(CategoryStore);
+
+  /** Unico per istanza: quickAdd ed editDialog possono restare montati insieme
+   * (la scorciatoia "N" apre quickAdd anche a editDialog aperto), quindi il
+   * bottone submit nel footer del dialog non può puntare a un id statico. */
+  readonly formId = `tx-form-${++formIdSeq}`;
 
   /** Transazione in modifica, null per nuovo inserimento. */
   readonly transaction = input<Transaction | null>(null);
@@ -51,8 +58,6 @@ export class TransactionForm {
   readonly description = signal<string>('');
   readonly tag = signal<TransactionTag | null>(null);
   readonly error = signal<string>('');
-
-  readonly editing = computed(() => this.transaction() !== null);
 
   readonly dateValue = computed(() => isoToDate(this.date()));
 

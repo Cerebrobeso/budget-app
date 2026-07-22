@@ -84,11 +84,19 @@
   <hlm-dialog #quickAdd="hlmDialog" closeDelay="100">
     <hlm-dialog-content
       *hlmDialogPortal
-      class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col overflow-hidden rounded-none
-             md:relative md:inset-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-full md:max-w-sm md:rounded-xl"
+      class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
+             sm:max-w-none
+             md:relative md:inset-auto md:h-auto md:w-full md:max-w-sm md:max-h-[calc(100dvh-2rem)] md:rounded-xl"
     >
-      <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Nuovo movimento</h2>
-      <app-transaction-form class="flex min-h-0 flex-1 flex-col" (saved)="quickAdd.close({})" />
+      <hlm-dialog-header>
+        <h2 hlmDialogTitle class="text-xl font-display font-bold">Nuovo movimento</h2>
+      </hlm-dialog-header>
+      <app-transaction-form #txForm class="flex min-h-0 flex-1 flex-col" (saved)="quickAdd.close({})" />
+      <hlm-dialog-footer class="rounded-b-none md:rounded-b-xl">
+        <button hlmBtn size="lg" type="submit" [attr.form]="txForm.formId" class="w-full font-display font-bold">
+          Aggiungi movimento
+        </button>
+      </hlm-dialog-footer>
     </hlm-dialog-content>
   </hlm-dialog>
 } @else {

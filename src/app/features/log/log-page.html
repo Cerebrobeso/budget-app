@@ -168,34 +168,40 @@
 </div>
 
 <!-- Dialog modifica -->
-<hlm-dialog #editDialog="hlmDialog" [overlayClass]="'hidden registro-backdrop fixed inset-0'" closeDelay="100">
+<hlm-dialog #editDialog="hlmDialog" closeDelay="100">
   <hlm-dialog-content
     *hlmDialogPortal
-    class="fixed inset-0 flex h-dvh w-dvw max-h-none flex-col overflow-hidden rounded-none
-           md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:w-full md:-translate-x-1/2 md:-translate-y-1/2
-           md:max-w-lg md:max-h-[92dvh] md:!rounded-3xl"
+    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
+           sm:max-w-none
+           md:relative md:inset-auto md:h-auto md:w-full md:max-w-sm md:max-h-[calc(100dvh-2rem)] md:rounded-xl"
   >
-    <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Modifica movimento</h2>
-    <app-transaction-form class="flex min-h-0 flex-1 flex-col" [transaction]="editing()" (saved)="editDialog.close({})" />
+    <hlm-dialog-header>
+      <h2 hlmDialogTitle class="text-xl font-display font-bold">Modifica movimento</h2>
+    </hlm-dialog-header>
+    <app-transaction-form #txForm class="flex min-h-0 flex-1 flex-col" [transaction]="editing()" (saved)="editDialog.close({})" />
+    <hlm-dialog-footer class="rounded-b-none md:rounded-b-xl">
+      <button hlmBtn size="lg" type="submit" [attr.form]="txForm.formId" class="w-full font-display font-bold">
+        Salva modifiche
+      </button>
+    </hlm-dialog-footer>
   </hlm-dialog-content>
 </hlm-dialog>
 
 <!-- Dialog conferma eliminazione -->
-<hlm-dialog #deleteDialog="hlmDialog" [overlayClass]="'hidden registro-backdrop fixed inset-0'" closeDelay="100">
-  <hlm-dialog-content
-    *hlmDialogPortal
-    class="fixed left-1/2 top-1/2 h-fit max-h-[80dvh] w-fit max-w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl"
-  >
-    <h2 hlmDialogTitle class="mb-2 text-xl font-display font-bold">Eliminare il movimento?</h2>
-    @if (deleting(); as tx) {
-      <p class="mb-4 text-sm text-muted-foreground">
-        {{ tx.description || catStore.label(tx.categoryId, tx.subcategoryId) }} ·
-        <span class="figure">{{ fmt(tx.amount) }}</span> del {{ tx.date | date:'dd/MM/yyyy'}}
-      </p>
-    }
-    <div class="flex justify-end gap-2">
+<hlm-dialog #deleteDialog="hlmDialog" closeDelay="100">
+  <hlm-dialog-content *hlmDialogPortal>
+    <hlm-dialog-header>
+      <h2 hlmDialogTitle class="text-xl font-display font-bold">Eliminare il movimento?</h2>
+      @if (deleting(); as tx) {
+        <p hlmDialogDescription>
+          {{ tx.description || catStore.label(tx.categoryId, tx.subcategoryId) }} ·
+          <span class="figure">{{ fmt(tx.amount) }}</span> del {{ tx.date | date:'dd/MM/yyyy'}}
+        </p>
+      }
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
       <button hlmDialogClose hlmBtn variant="outline">Annulla</button>
       <button hlmBtn variant="destructive" (click)="confirmDelete()">Elimina</button>
-    </div>
+    </hlm-dialog-footer>
   </hlm-dialog-content>
 </hlm-dialog>

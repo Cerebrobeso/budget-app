@@ -126,12 +126,14 @@
 <hlm-dialog #assetDialog="hlmDialog" closeDelay="100">
   <hlm-dialog-content
     *hlmDialogPortal
-    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col overflow-hidden rounded-none
-           md:relative md:inset-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-full md:max-w-sm md:rounded-xl"
+    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
+           sm:max-w-none
+           md:relative md:inset-auto md:h-auto md:w-full md:max-w-sm md:max-h-[calc(100dvh-2rem)] md:rounded-xl"
   >
-    <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Nuova posizione</h2>
-    <form class="flex h-full min-h-0 flex-col gap-4" (submit)="$event.preventDefault(); saveAsset()">
-      <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+    <hlm-dialog-header>
+      <h2 hlmDialogTitle class="text-xl font-display font-bold">Nuova posizione</h2>
+    </hlm-dialog-header>
+    <form id="asset-form" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 -mx-1" (submit)="$event.preventDefault(); saveAsset()">
       <div>
         <label hlmLabel for="asset-name">Nome</label>
         <input hlmInput id="asset-name" type="text" required placeholder="Es. Conto Sella, ETF World…"
@@ -164,22 +166,25 @@
           </hlm-date-picker>
         </div>
       </div>
-      </div>
-      <button hlmBtn size="lg" type="submit" class="shrink-0 font-display font-bold">Aggiungi posizione</button>
     </form>
+    <hlm-dialog-footer class="rounded-b-none md:rounded-b-xl">
+      <button hlmBtn size="lg" type="submit" form="asset-form" class="w-full font-display font-bold">Aggiungi posizione</button>
+    </hlm-dialog-footer>
   </hlm-dialog-content>
 </hlm-dialog>
 
 <!-- Dialog snapshot -->
-<hlm-dialog #snapDialog="hlmDialog"closeDelay="100">
+<hlm-dialog #snapDialog="hlmDialog" closeDelay="100">
   <hlm-dialog-content
     *hlmDialogPortal
-    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col overflow-hidden rounded-none
-           md:relative md:inset-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-full md:max-w-sm md:rounded-xl"
+    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
+           sm:max-w-none
+           md:relative md:inset-auto md:h-auto md:w-full md:max-w-sm md:max-h-[calc(100dvh-2rem)] md:rounded-xl"
   >
-    <h2 hlmDialogTitle class="mb-4 text-xl font-display font-bold">Snapshot — {{ snapAsset()?.name }}</h2>
-    <form class="flex h-full min-h-0 flex-col gap-4" (submit)="$event.preventDefault(); saveSnapshot()">
-      <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+    <hlm-dialog-header>
+      <h2 hlmDialogTitle class="text-xl font-display font-bold">Snapshot — {{ snapAsset()?.name }}</h2>
+    </hlm-dialog-header>
+    <form id="snap-form" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 -mx-1" (submit)="$event.preventDefault(); saveSnapshot()">
       <div>
         <label hlmLabel for="snap-value">Valore alla data</label>
         <input hlmInput id="snap-value" type="number" inputmode="decimal" step="0.01" min="0" required
@@ -193,27 +198,27 @@
         </hlm-date-picker>
         <p class="mt-1 text-xs text-muted-foreground">Uno snapshot alla stessa data sostituisce il precedente.</p>
       </div>
-      </div>
-      <button hlmBtn size="lg" type="submit" class="shrink-0 font-display font-bold">Salva snapshot</button>
     </form>
+    <hlm-dialog-footer class="rounded-b-none md:rounded-b-xl">
+      <button hlmBtn size="lg" type="submit" form="snap-form" class="w-full font-display font-bold">Salva snapshot</button>
+    </hlm-dialog-footer>
   </hlm-dialog-content>
 </hlm-dialog>
 
 <!-- Dialog conferma eliminazione posizione -->
 <hlm-dialog #deleteAssetDialog="hlmDialog" closeDelay="100">
-  <hlm-dialog-content
-    *hlmDialogPortal
-    class="fixed left-1/2 top-1/2 h-fit max-h-[80dvh] w-fit max-w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl"
-  >
-    @if (deletingAsset(); as asset) {
-      <h2 hlmDialogTitle class="mb-2 text-xl font-display font-bold">Eliminare "{{ asset.name }}"?</h2>
-      <p class="mb-4 text-sm text-muted-foreground">
-        La posizione e tutto il suo storico di valori verranno eliminati definitivamente.
-      </p>
-    }
-    <div class="flex justify-end gap-2">
+  <hlm-dialog-content *hlmDialogPortal>
+    <hlm-dialog-header>
+      @if (deletingAsset(); as asset) {
+        <h2 hlmDialogTitle class="text-xl font-display font-bold">Eliminare "{{ asset.name }}"?</h2>
+        <p hlmDialogDescription>
+          La posizione e tutto il suo storico di valori verranno eliminati definitivamente.
+        </p>
+      }
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
       <button hlmDialogClose hlmBtn variant="outline">Annulla</button>
       <button hlmBtn variant="destructive" (click)="confirmDeleteAsset()">Elimina</button>
-    </div>
+    </hlm-dialog-footer>
   </hlm-dialog-content>
 </hlm-dialog>

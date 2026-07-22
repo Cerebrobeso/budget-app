@@ -140,19 +140,20 @@
 </p>
 
 <!-- Dialog conferma eliminazione categoria -->
-<hlm-dialog #deleteCatDialog="hlmDialog" [overlayClass]="'hidden registro-backdrop fixed inset-0'" closeDelay="100">
-  <hlm-dialog-content
-    *hlmDialogPortal
-    class="fixed left-1/2 top-1/2 h-fit max-h-[80dvh] w-fit max-w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl"
-  >
+<hlm-dialog #deleteCatDialog="hlmDialog" closeDelay="100">
+  <hlm-dialog-content *hlmDialogPortal>
+    <hlm-dialog-header>
+      @if (deletingCat(); as cat) {
+        <h2 hlmDialogTitle class="text-xl font-display font-bold">Eliminare "{{ cat.name }}"?</h2>
+        <p hlmDialogDescription>
+          La categoria e le sue sottocategorie verranno eliminate definitivamente.
+        </p>
+      }
+    </hlm-dialog-header>
     @if (deletingCat(); as cat) {
-      <h2 hlmDialogTitle class="mb-2 text-xl font-display font-bold">Eliminare "{{ cat.name }}"?</h2>
-      <p class="mb-4 text-sm text-muted-foreground">
-        La categoria e le sue sottocategorie verranno eliminate definitivamente.
-      </p>
       @if (linkedTxCount(cat.id); as n) {
         @if (n > 0) {
-          <div class="mb-4 rounded-xl border border-border bg-muted/40 p-3">
+          <div class="rounded-xl border border-border bg-muted/40 p-3">
             <p class="mb-2 text-sm">
               {{ n }} {{ n === 1 ? 'movimento è già registrato' : 'movimenti sono già registrati' }} con questa categoria.
               Vuoi riassegnarli a un'altra categoria?
@@ -179,9 +180,9 @@
         }
       }
     }
-    <div class="flex justify-end gap-2">
+    <hlm-dialog-footer>
       <button hlmDialogClose hlmBtn variant="outline">Annulla</button>
       <button hlmBtn variant="destructive" (click)="confirmDeleteCat()">Elimina</button>
-    </div>
+    </hlm-dialog-footer>
   </hlm-dialog-content>
 </hlm-dialog>
