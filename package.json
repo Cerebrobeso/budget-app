@@ -1,10 +1,16 @@
 {
   "name": "budget-app",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build"
+    "build": "ng build",
+    "Patch release (1.0.0 --> 1.0.1)": "npm run release -- --release-as patch",
+    "Minor release (1.0.0 --> 1.1.0)": "npm run release -- --release-as minor",
+    "Major release (1.0.0 --> 2.0.0)": "npm run release -- --release-as major",
+    "Beta Minor release  (1.0.0 --> 1.1.0-beta)": "npm run release -- --release-as minor --prerelease beta",
+    "release": "commit-and-tag-version",
+    "test": "ng test --no-watch --headless"
   },
   "private": true,
   "dependencies": {
@@ -41,6 +47,7 @@
     "@playwright/test": "^1.61.1",
     "@spartan-ng/cli": "^1.1.1",
     "@tailwindcss/postcss": "^4.1.0",
+    "commit-and-tag-version": "^13.1.0",
     "postcss": "^8.5.0",
     "tailwindcss": "^4.1.0",
     "tw-animate-css": "^1.4.0",

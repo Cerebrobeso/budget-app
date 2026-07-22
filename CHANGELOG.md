@@ -1,10 +1,8 @@
 # Changelog
 
-All notable changes to this project are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
+All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
-## [Unreleased]
-
+## 1.3.1 (2026-07-22)
 ## [1.3.0] - 2026-07-21
 
 ### Fixed
