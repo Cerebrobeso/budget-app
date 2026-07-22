@@ -134,6 +134,14 @@ h1, h2, h3, .display {
     z-index: 1000;
 }
 
+/* Angular CDK forza overflow-y:scroll su <html> quando un overlay blocca lo scroll:
+   riserva sempre spazio per una scrollbar, cambiando la larghezza utile della pagina
+   solo mentre un dialog è aperto e "allargando" il resto dell'app. !important perché
+   CDK inietta questa classe a runtime dopo questo foglio di stile. */
+.cdk-global-scrollblock {
+    overflow: hidden !important;
+}
+
 :root {
     color-scheme: light;
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";

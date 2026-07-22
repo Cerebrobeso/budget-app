@@ -102,7 +102,7 @@ export class PortfolioPage {
     const series = this.store.totalSeries();
     return {
       grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
-      tooltip: { trigger: 'axis', valueFormatter: (v: unknown) => eur(Number(v)) },
+      tooltip: { trigger: 'axis', confine: true, valueFormatter: (v: unknown) => eur(Number(v)) },
       xAxis: {
         type: 'category',
         data: series.map((s) => this.fmtDate(s.date)),

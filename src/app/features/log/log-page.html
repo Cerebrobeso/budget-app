@@ -131,9 +131,11 @@
                 }
                 <span class="truncate">{{ tx.description || catStore.label(tx.categoryId, tx.subcategoryId) }}</span>
               </div>
-              <div class="truncate text-sm text-muted-foreground">
-                {{ catStore.label(tx.categoryId, tx.subcategoryId) }}
-              </div>
+              @if (tx.description) {
+                <div class="truncate text-sm text-muted-foreground">
+                  {{ catStore.label(tx.categoryId, tx.subcategoryId) }}
+                </div>
+              }
             </div>
             <div class="figure shrink-0 text-base font-semibold"
                  [class.text-income]="tx.type === 'income'" [class.text-expense]="tx.type === 'expense'">

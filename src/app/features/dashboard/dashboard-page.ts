@@ -145,7 +145,7 @@ export class DashboardPage {
     const c = this.axisColors();
     return {
       ...this.baseAxes(data.map((d) => d.label)),
-      tooltip: { trigger: 'axis', formatter: this.monthlyTooltipFormatter(data) },
+      tooltip: { trigger: 'axis', confine: true, formatter: this.monthlyTooltipFormatter(data) },
       legend: { top: 0, textStyle: { color: c.text } },
       series: [
         { name: 'Entrate', type: 'bar', data: data.map((d) => round2(d.income)), itemStyle: { color: c.income, borderRadius: [4, 4, 0, 0] } },
@@ -230,7 +230,7 @@ export class DashboardPage {
   readonly donutOptions = computed<EChartsCoreOption>(() => {
     const c = this.axisColors();
     return {
-      tooltip: { trigger: 'item', valueFormatter: (v: unknown) => eur(Number(v)) },
+      tooltip: { trigger: 'item', confine: true, valueFormatter: (v: unknown) => eur(Number(v)) },
       legend: { bottom: 0, textStyle: { color: c.text } },
       series: [{
         type: 'pie',
@@ -258,7 +258,7 @@ export class DashboardPage {
     const cumulative = data.map((d) => round2((cum += d.income - d.expense)));
     return {
       ...this.baseAxes(data.map((d) => d.label)),
-      tooltip: { trigger: 'axis', formatter: this.monthlyTooltipFormatter(data) },
+      tooltip: { trigger: 'axis', confine: true, formatter: this.monthlyTooltipFormatter(data) },
       legend: { top: 0, textStyle: { color: c.text } },
       series: [
         {

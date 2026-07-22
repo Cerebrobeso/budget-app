@@ -57,7 +57,7 @@
       variant="outline"
       [attr.aria-pressed]="type() === 'transfer'"
       [class]="type() === 'transfer'
-        ? 'transition-all bg-primary hover:bg-primary text-primary-foreground border-transparent hover:opacity-90 ring-2 ring-primary/50 ring-offset-2 ring-offset-background shadow-md shadow-primary/30'
+        ? 'transition-all bg-primary hover:bg-primary text-primary-foreground border-transparent hover:opacity-90 ring-2 ring-primary/50 ring-offset-2 ring-offset-background shadow-md shadow-primary/30 dark:bg-blue-600 dark:hover:bg-blue-600 dark:text-white dark:ring-blue-600/60 dark:shadow-blue-600/40'
         : 'transition-all opacity-60 hover:opacity-100'"
       (click)="setType('transfer')"
     >

@@ -117,8 +117,7 @@ export class TransactionForm {
     this.subcategoryId.set(typeof value === 'string' && value ? value : null);
   }
 
-  protected readonly categoryLabel = (id: string): string =>
-    this.availableCategories().find((c) => c.id === id)?.name ?? id;
+  protected readonly categoryLabel = (id: string): string => this.catStore.byId(id)?.name ?? id;
 
   protected readonly subcategoryLabel = (id: string): string =>
     this.subs().find((s) => s.id === id)?.name ?? id;
