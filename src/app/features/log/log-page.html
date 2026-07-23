@@ -53,7 +53,7 @@
     <input hlmInput id="search" type="text" placeholder="Cerca per descrizione, in tutti i mesi…"
            class="pl-9" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     @if (search()) {
-      <button hlmBtn variant="ghost" size="icon" class="absolute right-1 top-1/2 !size-7 -translate-y-1/2"
+      <button hlmBtn variant="ghost" size="icon" class="absolute right-1 top-1/2 size-7! -translate-y-1/2"
               aria-label="Cancella ricerca" hlmTooltip="Cancella ricerca" (click)="search.set('')">
         <ng-icon name="lucideX" size="14" />
       </button>
