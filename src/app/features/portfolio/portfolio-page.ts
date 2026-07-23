@@ -4,7 +4,7 @@ import { NgxEchartsDirective } from 'ngx-echarts';
 import type { EChartsCoreOption } from 'echarts';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucidePlus, lucideTrash2, lucideTriangleAlert, lucideX } from '@ng-icons/lucide';
-import { isBefore, subMonths } from 'date-fns';
+import { isBefore, startOfYear, subMonths } from 'date-fns';
 import { ASSET_CATEGORY_LABEL, Asset, AssetCategory, todayIso } from '../../core/models';
 import { PortfolioStore, ThemeService, latest, returnPct } from '../../core/stores';
 import { dateToIso, eur, formatDateItalian, isoToDate, pct } from '../../core/format';
@@ -50,7 +50,7 @@ export class PortfolioPage {
   private readonly snapDialog = viewChild.required<HlmDialog>('snapDialog');
   private readonly deleteAssetDialog = viewChild.required<HlmDialog>('deleteAssetDialog');
 
-  readonly from = signal(`${new Date().getFullYear()}-01-01`);
+  readonly from = signal(dateToIso(startOfYear(new Date())));
   readonly to = signal(todayIso());
 
   // form nuova posizione

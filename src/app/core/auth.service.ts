@@ -65,4 +65,18 @@ export class AuthService {
   async signOut(): Promise<void> {
     await supabase.auth.signOut();
   }
+
+  /** Ri-verifica la password corrente senza toccare la sessione già attiva (serve prima di operazioni distruttive). */
+  async reauthenticate(password: string): Promise<AuthResult> {
+    const email = this.user()?.email;
+    if (!email) return { error: 'Utente non disponibile' };
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
+  }
+
+  /** Invoca la Edge Function `delete-account`, che cancella tutte le righe dell'utente e l'utente stesso da Supabase Auth. */
+  async deleteAccount(): Promise<AuthResult> {
+    const { error } = await supabase.functions.invoke('delete-account');
+    return { error: error?.message ?? null };
+  }
 }

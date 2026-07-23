@@ -1,4 +1,5 @@
 import { format, isValid, parse } from 'date-fns';
+import { it } from 'date-fns/locale';
 import type { MaskitoOptions } from '@maskito/core';
 import { maskitoNumber, maskitoParseNumber, maskitoStringifyNumber } from '@maskito/kit';
 
@@ -17,15 +18,20 @@ export function eurSigned(value: number): string {
   return `${sign}${EUR.format(Math.abs(value))}`;
 }
 
-export const MONTHS_SHORT = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'];
-export const MONTHS_LONG = [
-  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
-];
+/** Nome breve del mese (1-12) in maiuscolo, es. "GEN". */
+export function monthShortLabel(month: number): string {
+  return format(new Date(2000, month - 1, 1), 'MMM', { locale: it }).toUpperCase();
+}
+
+/** Nome esteso del mese (1-12) con iniziale maiuscola, es. "Gennaio". */
+export function monthLongLabel(month: number): string {
+  const label = format(new Date(2000, month - 1, 1), 'MMMM', { locale: it });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
 
 export function formatDayLabel(iso: string): string {
   const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' });
+  return format(d, 'EEE d MMMM', { locale: it });
 }
 
 const ISO_DATE_FORMAT = 'yyyy-MM-dd';

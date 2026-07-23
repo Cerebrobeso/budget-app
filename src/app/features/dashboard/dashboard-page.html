@@ -1,7 +1,6 @@
-<h1 class="mb-4 font-display text-2xl font-extrabold">Grafici</h1>
 
 <!-- Selettore intervallo -->
-<div hlmCard class="mb-4 p-3">
+<div hlmCard class="mt-6 mb-4 p-3">
   <div class="flex flex-wrap items-center gap-2">
     @for (preset of presets; track preset.id) {
       <button hlmBtn size="sm" [variant]="range() === preset.id ? 'default' : 'outline'"

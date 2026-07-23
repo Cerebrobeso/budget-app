@@ -1,0 +1,108 @@
+
+<!-- Avatar e email dell'account -->
+<div class="mt-6 mb-6 flex flex-col items-center gap-2">
+	<ng-icon class="text-muted-foreground" name="lucideCircleUserRound" size="64"/>
+	<span class="text-sm text-muted-foreground">{{ email() }}</span>
+</div>
+
+<!-- Impostazioni: tema e categorie -->
+<div class="mb-4 p-4" hlmCard>
+	<h2 class="mb-3 font-display text-lg font-bold">Preferenze</h2>
+	<div class="flex items-center justify-between py-2">
+		<span class="text-sm font-medium">Tema scuro</span>
+		<hlm-switch (checkedChange)="theme.toggle()" [checked]="theme.dark()" aria-label="Tema scuro"/>
+	</div>
+	<div class="mt-1 flex items-center justify-between border-t border-border pt-3">
+		<div>
+			<span class="text-sm font-medium">Categorie</span>
+			<p class="text-xs text-muted-foreground">Gestisci categorie e sottocategorie dei tuoi movimenti.</p>
+		</div>
+		<a hlmBtn routerLink="/profilo/categorie" size="sm" variant="outline">
+			Apri
+			<ng-icon class="ml-1" name="lucideChevronRight" size="14"/>
+		</a>
+	</div>
+</div>
+
+<!-- Dati e account -->
+<div class="mb-4 p-4" hlmCard>
+	<h2 class="font-display text-lg font-bold">Dati e account</h2>
+	<div class="flex items-center justify-between gap-3">
+		<div>
+			<span class="text-sm font-medium">Esportazione dati</span>
+			<p class="text-xs text-muted-foreground">Scarica una copia completa di tutti i tuoi dati (movimenti, categorie,
+				patrimonio, ricorrenze) in formato JSON.</p>
+		</div>
+
+		<button (click)="exportBackup()" hlmBtn variant="outline">
+			<ng-icon name="lucideDownload" class="mr-1" size="14" /> Scarica
+		</button>
+	</div>
+	<div class="mt-1 flex items-center justify-between border-t border-border pt-3">
+		<div>
+			<span class="text-sm font-medium">Elimina account</span>
+			<p class="text-xs text-muted-foreground">L'eliminazione dell'account è permanente: tutti i tuoi dati e il tuo
+				accesso verranno cancellati per sempre.</p>
+		</div>
+		<button (click)="askDeleteAccount()" hlmBtn variant="destructive">
+			<ng-icon name="lucideUserRoundX" class="mr-1" size="14" /> Elimina</button>
+
+	</div>
+</div>
+
+<!-- Logout in fondo alla pagina -->
+<div class="mt-8 flex justify-center">
+	<button (click)="logout()" hlmBtn variant="outline" size="lg">
+		<ng-icon class="mr-1" name="lucideLogOut" size="14"/>
+		Logout
+	</button>
+</div>
+
+<!-- Dialog 1: conferma testuale -->
+<hlm-dialog #confirmDialog="hlmDialog" closeDelay="100">
+	<hlm-dialog-content *hlmDialogPortal>
+		<hlm-dialog-header>
+			<h2 class="text-xl font-display font-bold" hlmDialogTitle>Eliminare il tuo account?</h2>
+			<p hlmDialogDescription>
+				Questa azione è irreversibile: tutti i tuoi dati e il tuo accesso verranno cancellati definitivamente.
+				Scrivi <strong>ELIMINA</strong> per confermare.
+			</p>
+		</hlm-dialog-header>
+		<input (ngModelChange)="confirmText.set($event)" [ngModel]="confirmText()" hlmInput placeholder="ELIMINA"
+		       type="text"/>
+		<hlm-dialog-footer>
+			<button (click)="resetDeleteFlow()" hlmBtn hlmDialogClose variant="outline">Annulla</button>
+			<button (click)="proceedToPassword()" [disabled]="confirmText().trim().toUpperCase() !== 'ELIMINA'" hlmBtn
+			        variant="destructive">
+				Continua
+			</button>
+		</hlm-dialog-footer>
+	</hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Dialog 2: verifica password -->
+<hlm-dialog #passwordDialog="hlmDialog" closeDelay="100">
+	<hlm-dialog-content *hlmDialogPortal>
+		<hlm-dialog-header>
+			<h2 class="text-xl font-display font-bold" hlmDialogTitle>Conferma la tua password</h2>
+			<p hlmDialogDescription>Per motivi di sicurezza, inserisci la password per completare l'eliminazione.</p>
+		</hlm-dialog-header>
+		<input
+						(keydown.enter)="confirmDeleteAccount()"
+						(ngModelChange)="password.set($event); deleteError.set(null)"
+						[ngModel]="password()"
+						hlmInput
+						placeholder="Password"
+						type="password"
+		/>
+		@if (deleteError()) {
+			<p class="text-sm text-expense">{{ deleteError() }}</p>
+		}
+		<hlm-dialog-footer>
+			<button (click)="resetDeleteFlow()" hlmBtn hlmDialogClose variant="outline">Annulla</button>
+			<button (click)="confirmDeleteAccount()" [disabled]="!password() || deleting()" hlmBtn variant="destructive">
+				{{ deleting() ? 'Eliminazione…' : 'Conferma eliminazione' }}
+			</button>
+		</hlm-dialog-footer>
+	</hlm-dialog-content>
+</hlm-dialog>

@@ -1,5 +1,5 @@
 <!-- Timbro del mese: il saldo come split di gara -->
-<section hlmCard class="mb-4 overflow-hidden" style="--card-spacing: 0;">
+<section hlmCard class="mt-6 mb-4 overflow-hidden" style="--card-spacing: 0;">
   <div class="flex items-center justify-between border-b border-border px-4 py-3">
     <button hlmBtn variant="ghost" size="icon" aria-label="Mese precedente" hlmTooltip="Mese precedente" (click)="shiftMonth(-1)">
       <ng-icon name="lucideChevronLeft" />
@@ -34,8 +34,20 @@
 </section>
 
 <!-- Ricerca ed export -->
-<div class="mb-3 mt-8 flex gap-2">
-  <div class="relative flex-1">
+<div class="mb-2 mt-8 flex gap-2">
+
+	<div class="flex items-center justify-between w-full flex-0">
+		<span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filtri</span>
+		@if (anyFilterActive()) {
+			<button hlmBtn variant="link" size="sm" class="h-auto p-0 text-xs text-muted-foreground" (click)="clearFilters()">
+				<ng-icon name="lucideX" size="12" class="mr-1" /> Cancella filtri
+			</button>
+		}
+	</div>
+</div>
+
+<div class="mb-3 flex gap-2">
+  <div class="relative w-full ">
     <ng-icon name="lucideSearch" size="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
     <label hlmLabel class="sr-only" for="search">Cerca movimenti</label>
     <input hlmInput id="search" type="text" placeholder="Cerca per descrizione, in tutti i mesi…"
@@ -56,48 +68,55 @@
 }
 
 <!-- Filtri categoria / sottocategoria -->
-<div class="mb-4 grid grid-cols-2 gap-2 md:flex md:flex-wrap">
-  <div hlmSelect class="w-full md:w-auto" [value]="filterCategory()" (valueChange)="onFilterCategory($event)" [itemToString]="categoryLabel">
-    <label hlmLabel class="sr-only" for="filter-category">Filtra per categoria</label>
-    <hlm-select-trigger buttonId="filter-category" class="w-full md:w-auto">
-      <span hlmSelectValue placeholder="Tutte le categorie"></span>
-    </hlm-select-trigger>
-    <hlm-select-content *hlmSelectPortal>
-      <hlm-select-item value="__all__">Tutte le categorie</hlm-select-item>
-      @for (cat of catStore.active(); track cat.id) {
-        <hlm-select-item [value]="cat.id">
-          <span class="mr-2 inline-block size-2.5 rounded-full" [style.background]="cat.color"></span>
-          {{ cat.name }}
-        </hlm-select-item>
-      }
-    </hlm-select-content>
+<div class="mb-4">
+  <div class="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
+    <div hlmSelect class="w-full md:w-auto" [value]="filterCategory()" (valueChange)="onFilterCategory($event)" [itemToString]="categoryLabel">
+      <label hlmLabel class="sr-only" for="filter-category">Filtra per categoria</label>
+      <hlm-select-trigger buttonId="filter-category" class="w-full md:w-auto">
+        <span hlmSelectValue placeholder="Tutte le categorie"></span>
+      </hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        <hlm-select-item value="__all__">Tutte le categorie</hlm-select-item>
+        @for (cat of catStore.active(); track cat.id) {
+          <hlm-select-item [value]="cat.id">
+            <span class="mr-2 inline-block size-2.5 rounded-full" [style.background]="cat.color"></span>
+            {{ cat.name }}
+          </hlm-select-item>
+        }
+      </hlm-select-content>
+    </div>
+    <div hlmSelect class="w-full md:w-auto" [value]="filterSub()" (valueChange)="onFilterSub($event)" [disabled]="filterCategory() === '__all__'" [itemToString]="subcategoryLabel">
+      <label hlmLabel class="sr-only" for="filter-subcategory">Filtra per sottocategoria</label>
+      <hlm-select-trigger buttonId="filter-subcategory" class="w-full md:w-auto">
+        <span hlmSelectValue placeholder="Tutte le sottocategorie"></span>
+      </hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        <hlm-select-item value="__all__">Tutte le sottocategorie</hlm-select-item>
+        @for (sub of filterSubs(); track sub.id) {
+          <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
+        }
+      </hlm-select-content>
+    </div>
+    <div hlmButtonGroup class="col-span-2 w-full md:w-auto">
+      <button hlmBtn size="sm" class="min-w-0 flex-1 md:flex-initial" [variant]="filterTag() === 'unexpected' ? 'default' : 'outline'"
+              [class.bg-expense]="filterTag() === 'unexpected'" [class.hover:bg-expense]="filterTag() === 'unexpected'"
+              [class.text-white]="filterTag() === 'unexpected'" [class.border-transparent]="filterTag() === 'unexpected'"
+              (click)="setFilterTag('unexpected')">
+        <ng-icon name="lucideTriangleAlert" class="mr-1 shrink-0" size="14" />
+        <span class="truncate"><span class="hidden md:inline">Solo </span>Imprevisti</span>
+      </button>
+      <button hlmBtn size="sm" class="min-w-0 flex-1 md:flex-initial" [variant]="filterTag() === 'planned' ? 'default' : 'outline'"
+              [class.bg-primary]="filterTag() === 'planned'" [class.hover:bg-primary]="filterTag() === 'planned'"
+              [class.text-primary-foreground]="filterTag() === 'planned'" [class.border-transparent]="filterTag() === 'planned'"
+              (click)="setFilterTag('planned')">
+        <ng-icon name="lucideCalendarDays" class="mr-1 shrink-0" size="14" />
+        <span class="truncate"><span class="hidden md:inline">Solo </span>Programmate</span>
+      </button>
+    </div>
   </div>
-  <div hlmSelect class="w-full md:w-auto" [value]="filterSub()" (valueChange)="onFilterSub($event)" [disabled]="filterCategory() === '__all__'" [itemToString]="subcategoryLabel">
-    <label hlmLabel class="sr-only" for="filter-subcategory">Filtra per sottocategoria</label>
-    <hlm-select-trigger buttonId="filter-subcategory" class="w-full md:w-auto">
-      <span hlmSelectValue placeholder="Tutte le sottocategorie"></span>
-    </hlm-select-trigger>
-    <hlm-select-content *hlmSelectPortal>
-      <hlm-select-item value="__all__">Tutte le sottocategorie</hlm-select-item>
-      @for (sub of filterSubs(); track sub.id) {
-        <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
-      }
-    </hlm-select-content>
-  </div>
-  <button hlmBtn size="sm" class="w-full md:w-auto" [variant]="filterTag() === 'unexpected' ? 'default' : 'outline'"
-          [class.bg-expense]="filterTag() === 'unexpected'" [class.hover:bg-expense]="filterTag() === 'unexpected'"
-          [class.text-white]="filterTag() === 'unexpected'" [class.border-transparent]="filterTag() === 'unexpected'"
-          (click)="setFilterTag('unexpected')">
-    <ng-icon name="lucideTriangleAlert" class="mr-1" size="14" /> Solo imprevisti
-  </button>
-  <button hlmBtn size="sm" class="w-full md:w-auto" [variant]="filterTag() === 'planned' ? 'default' : 'outline'"
-          [class.bg-primary]="filterTag() === 'planned'" [class.hover:bg-primary]="filterTag() === 'planned'"
-          [class.text-primary-foreground]="filterTag() === 'planned'" [class.border-transparent]="filterTag() === 'planned'"
-          (click)="setFilterTag('planned')">
-    <ng-icon name="lucideCalendarDays" class="mr-1" size="14" /> Solo programmate
-  </button>
 </div>
 
+<hr class="my-4">
 <!-- Lista movimenti raggruppata per giorno -->
 @if (groups().length === 0) {
   <div hlmCard class="p-8 text-center text-muted-foreground">

@@ -14,26 +14,19 @@ import { HlmDialog } from '@spartan-ng/helm/dialog';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideChartPie,
-  lucideDownload,
   lucideList,
-  lucideLogOut,
-  lucideMoon,
   lucidePlus,
   lucideRepeat,
-  lucideSun,
-  lucideTag,
+  lucideUser,
   lucideWallet,
 } from '@ng-icons/lucide';
 import { AuthService } from './core/auth.service';
-import { downloadFile } from './core/export';
-import { todayIso } from './core/models';
 import { environment } from '../environments/environment';
 import { CategoryStore, PortfolioStore, RecurringStore, ThemeService, TransactionStore } from './core/stores';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmSpinner } from '@spartan-ng/helm/spinner';
 import { HlmToasterImports } from '@spartan-ng/helm/sonner';
-import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { TransactionForm } from './features/log/transaction-form';
 
 @Component({
@@ -49,19 +42,14 @@ import { TransactionForm } from './features/log/transaction-form';
     TransactionForm,
     ...HlmDialogImports,
     ...HlmToasterImports,
-    ...HlmTooltipImports,
   ],
   providers: [
     provideIcons({
       lucideChartPie,
-      lucideDownload,
       lucideList,
-      lucideLogOut,
-      lucideMoon,
       lucidePlus,
       lucideRepeat,
-      lucideSun,
-      lucideTag,
+      lucideUser,
       lucideWallet,
     }),
   ],
@@ -124,28 +112,11 @@ export class App {
     { path: '/dashboard', label: 'Grafici', icon: 'lucideChartPie' },
     { path: '/patrimonio', label: 'Patrimonio', icon: 'lucideWallet' },
     { path: '/ricorrenti', label: 'Ricorrenti', icon: 'lucideRepeat' },
-    { path: '/categorie', label: 'Categorie', icon: 'lucideTag' },
+    { path: '/profilo', label: 'Profilo', icon: 'lucideUser' },
   ];
 
   openQuickAdd(): void {
     this.quickAdd().open();
-  }
-
-  /** Backup completo (tutti i dati dell'utente) in JSON, scaricato lato client. */
-  exportBackup(): void {
-    const data = {
-      exportedAt: new Date().toISOString(),
-      transactions: this.transactionStore.transactions(),
-      categories: this.categoryStore.categories(),
-      assets: this.portfolioStore.assets(),
-      recurringRules: this.recurringStore.rules(),
-    };
-    downloadFile(JSON.stringify(data, null, 2), `registro-backup-${todayIso()}.json`, 'application/json');
-  }
-
-  async logout(): Promise<void> {
-    await this.auth.signOut();
-    void this.router.navigateByUrl('/login');
   }
 
   @HostListener('window:keydown', ['$event'])

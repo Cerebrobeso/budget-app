@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import type { ECElementEvent, EChartsCoreOption } from 'echarts';
 import { CategoryStore, ThemeService, TransactionStore } from '../../core/stores';
-import { MONTHS_SHORT, dateToIso, eur, formatDateItalian, isoToDate } from '../../core/format';
+import { dateToIso, eur, formatDateItalian, isoToDate, monthShortLabel } from '../../core/format';
 import { todayIso } from '../../core/models';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
@@ -90,7 +90,7 @@ export class DashboardPage {
     }
     return [...buckets.entries()].map(([key, v]) => {
       const [yy, mm] = key.split('-').map(Number);
-      return { key, label: `${MONTHS_SHORT[mm - 1]} ${String(yy).slice(2)}`, ...v };
+      return { key, label: `${monthShortLabel(mm)} ${String(yy).slice(2)}`, ...v };
     });
   });
 

@@ -4,9 +4,10 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideX } from '@ng-icons/lucide';
 import { Transaction, TransactionTag, TRANSACTION_TAG_LABEL, TRANSFER_CATEGORY_ID, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
-import { MONTHS_LONG, MONTHS_SHORT, eur, eurSigned, formatDayLabel } from '../../core/format';
+import { eur, eurSigned, formatDayLabel, monthLongLabel, monthShortLabel } from '../../core/format';
 import { downloadFile, toCsv } from '../../core/export';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmButtonGroupImports } from '@spartan-ng/helm/button-group';
 import { HlmCard } from '@spartan-ng/helm/card';
 import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmInput } from '@spartan-ng/helm/input';
@@ -28,6 +29,7 @@ interface DayGroup {
   imports: [
     FormsModule,
     HlmButton,
+    ...HlmButtonGroupImports,
     HlmCard,
     HlmInput,
     HlmLabel,
@@ -63,8 +65,8 @@ export class LogPage {
   private readonly editDialog = viewChild.required<HlmDialog>('editDialog');
   private readonly deleteDialog = viewChild.required<HlmDialog>('deleteDialog');
 
-  readonly monthStamp = computed(() => MONTHS_SHORT[this.month() - 1]);
-  readonly monthLong = computed(() => MONTHS_LONG[this.month() - 1]);
+  readonly monthStamp = computed(() => monthShortLabel(this.month()));
+  readonly monthLong = computed(() => monthLongLabel(this.month()));
 
   readonly filterSubs = computed(() => {
     this.catStore.categories();
@@ -74,6 +76,8 @@ export class LogPage {
 
   /** Con una ricerca attiva si guarda in tutti i mesi, altrimenti solo in quello aperto. */
   readonly searching = computed(() => this.search().trim().length > 0);
+
+  readonly anyFilterActive = computed(() => this.filterCategory() !== '__all__' || this.filterTag() !== null);
 
   /** Ricerca + filtro categoria/sottocategoria: guida il saldo del mese, indipendentemente dal filtro per etichetta. */
   readonly filtered = computed(() => {
@@ -137,6 +141,12 @@ export class LogPage {
 
   setFilterTag(tag: TransactionTag): void {
     this.filterTag.update((cur) => (cur === tag ? null : tag));
+  }
+
+  clearFilters(): void {
+    this.filterCategory.set('__all__');
+    this.filterSub.set('__all__');
+    this.filterTag.set(null);
   }
 
   /** Fa scorrere l'etichetta di un movimento (nessuna -> imprevisto -> programmata -> nessuna) senza passare dal form di modifica. */
