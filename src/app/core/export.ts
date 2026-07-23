@@ -9,9 +9,16 @@ export function downloadFile(content: string, filename: string, mime: string): v
   URL.revokeObjectURL(url);
 }
 
-/** Un campo per riga CSV: tra virgolette (con "" raddoppiate) se contiene `;`, virgolette o newline. */
+/**
+ * Un campo per riga CSV: tra virgolette (con "" raddoppiate) se contiene `;`, virgolette o newline.
+ * Se inizia con `=`, `+`, `-`, `@`, tab o CR viene anteposto un apice: senza, un foglio di calcolo
+ * (Excel/Sheets/LibreOffice) interpreterebbe il valore come una formula da eseguire all'apertura
+ * del file (CSV/formula injection — CWE-1236), e qui i campi derivano da testo libero dell'utente
+ * (descrizione, nome categoria/sottocategoria).
+ */
 function csvField(value: string): string {
-  return /[;"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[;"\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 /** CSV con `;` come separatore (convenzione Excel it-IT). */
