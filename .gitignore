@@ -39,10 +39,9 @@ Thumbs.db
 /coverage
 /.nyc_output
 
-# ==== Claude ====
-.claude
-CLAUDE.md
+# ==== Supabase ====
 /supabase/schema.sql
+/supabase/.temp/
 
 # ==== Dati personali ====
 # Dati finanziari reali usati come seed locale: non va in repo.
