@@ -8,7 +8,7 @@
       <div class="font-display text-3xl font-extrabold tracking-tight leading-none">
         {{ monthStamp() }}
       </div>
-      <div class="text-xs uppercase tracking-widest text-muted-foreground">{{ monthLong() }} {{ year() }}</div>
+      <div class="text-sm uppercase tracking-widest text-muted-foreground">{{ monthLong() }} {{ year() }}</div>
     </div>
     <button hlmBtn variant="ghost" size="icon" aria-label="Mese successivo" hlmTooltip="Mese successivo" (click)="shiftMonth(1)">
       <ng-icon name="lucideChevronRight" />
@@ -16,15 +16,15 @@
   </div>
   <div class="grid grid-cols-3 divide-x divide-border text-center">
     <div class="px-2 py-3">
-      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Entrate</div>
+      <div class="text-sm uppercase tracking-wider text-muted-foreground">Entrate</div>
       <div class="figure text-base md:text-lg font-semibold text-income">{{ fmt(totIncome()) }}</div>
     </div>
     <div class="px-2 py-3">
-      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Uscite</div>
+      <div class="text-sm uppercase tracking-wider text-muted-foreground">Uscite</div>
       <div class="figure text-base md:text-lg font-semibold text-expense">{{ fmt(totExpense()) }}</div>
     </div>
     <div class="px-2 py-3" [class.bg-income-soft]="balance() >= 0" [class.bg-expense-soft]="balance() < 0">
-      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Saldo</div>
+      <div class="text-sm uppercase tracking-wider text-muted-foreground">Saldo</div>
       <div class="figure text-base md:text-lg font-bold"
            [class.text-income]="balance() >= 0" [class.text-expense]="balance() < 0">
         {{ fmtSigned(balance()) }}
@@ -37,9 +37,9 @@
 <div class="mb-2 mt-8 flex gap-2">
 
 	<div class="flex items-center justify-between w-full flex-0">
-		<span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filtri</span>
+		<span class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Filtri</span>
 		@if (anyFilterActive()) {
-			<button hlmBtn variant="link" size="sm" class="h-auto p-0 text-xs text-muted-foreground" (click)="clearFilters()">
+			<button hlmBtn variant="link" size="sm" class="h-auto p-0 text-sm text-muted-foreground" (click)="clearFilters()">
 				<ng-icon name="lucideX" size="12" class="mr-1" /> Cancella filtri
 			</button>
 		}
@@ -64,7 +64,7 @@
   </button>
 </div>
 @if (searching()) {
-  <p class="mb-4 text-xs text-muted-foreground">Risultati in tutti i mesi per "{{ search() }}".</p>
+  <p class="mb-4 text-sm text-muted-foreground">Risultati in tutti i mesi per "{{ search() }}".</p>
 }
 
 <!-- Filtri categoria / sottocategoria -->
@@ -130,7 +130,7 @@
 <div class="flex flex-col gap-6">
   @for (group of groups(); track group.date) {
     <div>
-      <div class="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div class="mb-2 px-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
         {{ group.label }}
       </div>
       <div hlmCard class="divide-y divide-border" style="--card-spacing: 0;">

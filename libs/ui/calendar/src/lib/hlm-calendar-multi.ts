@@ -109,7 +109,7 @@ import { classes, hlm } from '@spartan-ng/helm/utils';
 						<th
 							*brnCalendarWeekday="let weekday"
 							scope="col"
-							class="text-muted-foreground flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal select-none"
+							class="text-muted-foreground flex-1 rounded-(--cell-radius) text-sm font-normal select-none"
 							[attr.aria-label]="_i18n.config().labelWeekday(weekday)"
 						>
 							{{ _i18n.config().formatWeekdayName(weekday) }}

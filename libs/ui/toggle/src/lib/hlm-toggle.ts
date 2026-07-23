@@ -13,7 +13,7 @@ export const toggleVariants = cva(
 			},
 			size: {
 				default: 'h-8 min-w-8 px-2.5',
-				sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] [&_ng-icon:not([class*='text-'])]:text-[length:--spacing(3.5)]",
+				sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-sm [&_ng-icon:not([class*='text-'])]:text-[length:--spacing(3.5)]",
 				lg: 'h-9 min-w-9 px-2.5',
 			},
 		},

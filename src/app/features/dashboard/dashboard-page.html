@@ -23,13 +23,13 @@
       </div>
     </div>
   }
-  <p class="figure mt-2 text-xs text-muted-foreground">{{ fmtDate(from()) }} → {{ fmtDate(to()) }}</p>
+  <p class="figure mt-2 text-sm text-muted-foreground">{{ fmtDate(from()) }} → {{ fmtDate(to()) }}</p>
 </div>
 
 <!-- Entrate vs uscite per mese -->
 <section hlmCard class="mb-4 p-4">
   <h2 class="mb-1 font-display text-lg font-bold">Entrate vs uscite</h2>
-  <p class="mb-2 text-xs text-muted-foreground">Totali mensili nel periodo selezionato</p>
+  <p class="mb-2 text-sm text-muted-foreground">Totali mensili nel periodo selezionato</p>
   <div echarts [options]="barOptions()" class="h-72 w-full"></div>
 </section>
 
@@ -37,7 +37,7 @@
 <section hlmCard class="mb-4 p-4">
   <div class="mb-1 flex items-center gap-2">
     @if (selectedCategoryName(); as name) {
-      <button hlmBtn variant="ghost" size="sm" class="!px-2 !py-1 text-xs" (click)="backToCategories()">
+      <button hlmBtn variant="ghost" size="sm" class="!px-2 !py-1 text-sm" (click)="backToCategories()">
         ← Categorie
       </button>
       <h2 class="font-display text-lg font-bold">Uscite · {{ name }}</h2>
@@ -45,7 +45,7 @@
       <h2 class="font-display text-lg font-bold">Uscite per categoria</h2>
     }
   </div>
-  <p class="mb-2 text-xs text-muted-foreground">
+  <p class="mb-2 text-sm text-muted-foreground">
     {{ selectedCategoryName() ? 'Distribuzione per sottocategoria nel periodo selezionato' : 'Distribuzione nel periodo selezionato — clicca una categoria in legenda per il dettaglio' }}
   </p>
   @if (donutTotal() > 0) {
@@ -66,6 +66,6 @@
 <!-- Trend saldo netto -->
 <section hlmCard class="mb-4 p-4">
   <h2 class="mb-1 font-display text-lg font-bold">Saldo netto nel tempo</h2>
-  <p class="mb-2 text-xs text-muted-foreground">Entrate − uscite, mese per mese, con cumulato</p>
+  <p class="mb-2 text-sm text-muted-foreground">Entrate − uscite, mese per mese, con cumulato</p>
   <div echarts [options]="trendOptions()" class="h-72 w-full"></div>
 </section>
