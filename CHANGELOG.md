@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.5.0](https://github.com/Cerebrobeso/budget-app/compare/v1.4.0...v1.5.0) (2026-07-23)
+
+### ⚠ BREAKING CHANGES
+
+* **profile:** Replace MONTHS_* constants with functional equivalents in `format.ts`.
+
+### Features
+
+* **profile:** add profile page with account management ([6065b60](https://github.com/Cerebrobeso/budget-app/commit/6065b60ed34125ceba5a7ab3be8832de57d9f5a5))
+* **ui:** standardize font sizes for improved readability ([3de3c13](https://github.com/Cerebrobeso/budget-app/commit/3de3c13353658b5c20fd5abe3f46373d7d018bf7))
 ## [1.4.0](https://github.com/Cerebrobeso/budget-app/compare/v1.3.1...v1.4.0) (2026-07-22)
 ## 1.3.1 (2026-07-22)
 ## [1.3.0] - 2026-07-21
