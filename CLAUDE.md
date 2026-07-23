@@ -14,9 +14,18 @@ npm start                # dev server at http://localhost:4200 (uses environment
 npm run build            # production build to dist/budget-app
 npx tsc --noEmit -p tsconfig.app.json   # type check only (what CI runs)
 npx ng build             # what CI runs to verify the build
+npm test                 # unit tests (Vitest via @angular/build:unit-test, --no-watch); what CI and the deploy workflow both run
 ```
 
-There is no configured lint or unit test target (no `test`/`lint` script, no Karma/Jasmine setup). `@playwright/test` is a devDependency but no Playwright config or spec files exist yet — don't assume either test runner is wired up.
+There is no configured lint target. `@playwright/test` is a devDependency but no Playwright config or spec files exist yet — don't assume an e2e runner is wired up.
+
+## Testing
+
+Unit tests run on Vitest through Angular's `@angular/build:unit-test` builder (`angular.json`'s `test` architect target), not Karma/Jasmine. Spec files are colocated next to the source they test (`format.spec.ts` next to `format.ts`, etc.) and picked up by the builder's default `**/*.spec.ts` glob. `tsconfig.spec.json` covers them.
+
+The test target's `buildTarget` is pinned to the `production` configuration (not the builder's own default, `development`) specifically so tests never need `environment.development.ts` — that file is gitignored and neither `ci.yml` nor `deploy.yml` generate it, only `environment.ts`/`environment.production.ts`.
+
+`src/app/core/stores.spec.ts`'s `CategoryStore` suite is the reference pattern for testing a store: provide a hand-written fake implementing `BudgetRepository` and a fake `AuthService`-shaped object (`{ user: signal(...), ready: signal(true) }`) via `TestBed.configureTestingModule({ providers: [...] })`, then `TestBed.flushEffects()` (this app is zoneless — effects don't run on their own without a trigger) before asserting on store state. Prefer fakes over `vi.mock`/spies for the repository and auth boundary, matching the optimistic-update-then-rollback shape stores already follow — this makes rollback-on-failure trivial to test by having the fake reject.
 
 ## Environment setup
 

@@ -56,6 +56,9 @@ jobs:
           };
           EOF
 
+      - name: Test
+        run: npx ng test
+
       - name: Build
         run: npx ng build --base-href "/${{ github.event.repository.name }}/"
 

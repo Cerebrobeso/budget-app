@@ -40,5 +40,8 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit -p tsconfig.app.json
 
+      - name: Test
+        run: npx ng test
+
       - name: Build
         run: npx ng build

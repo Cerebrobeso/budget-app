@@ -51,6 +51,12 @@
             "development": { "buildTarget": "budget-app:build:development" }
           },
           "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "budget-app:build:production"
+          }
         }
       }
     }
