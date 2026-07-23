@@ -386,6 +386,14 @@ export class RecurringStore {
     );
   }
 
+  /** Ripristina una regola già rimossa (stesso id), per l'"Annulla" dopo un'eliminazione. */
+  restore(rule: RecurringRule): void {
+    this.rules.update((list) => [...list, rule]);
+    this.repo.addRecurringRule(rule).catch((err) =>
+      reportWriteFailure(err, () => this.rules.update((list) => list.filter((r) => r.id !== rule.id))),
+    );
+  }
+
   /**
    * Genera i movimenti dovuti fino a oggi per ogni regola attiva, guardando i movimenti già
    * collegati a ciascuna regola per capire da dove riprendere. Best-effort lato client: con più

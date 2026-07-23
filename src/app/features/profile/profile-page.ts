@@ -12,7 +12,7 @@ import {
   HlmDialogClose,
   HlmDialogContent,
   HlmDialogDescription,
-  HlmDialogFooter, HlmDialogHeader, HlmDialogTitle
+  HlmDialogFooter, HlmDialogHeader, HlmDialogPortal, HlmDialogTitle
 } from '@spartan-ng/helm/dialog';
 import {downloadFile} from '../../core/export';
 import {todayIso} from '../../core/models';
@@ -23,7 +23,7 @@ import {HlmInput} from '@spartan-ng/helm/input';
 @Component({
   selector: 'app-profile-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, HlmButton, HlmCard, NgIcon, ...HlmSwitchImports, FormsModule, HlmDialog, HlmDialogClose, HlmDialogContent, HlmDialogDescription, HlmDialogFooter, HlmDialogHeader, HlmDialogTitle, HlmInput],
+  imports: [RouterLink, HlmButton, HlmCard, NgIcon, ...HlmSwitchImports, FormsModule, HlmDialog, HlmDialogClose, HlmDialogContent, HlmDialogDescription, HlmDialogFooter, HlmDialogHeader, HlmDialogPortal, HlmDialogTitle, HlmInput],
   providers: [provideIcons({ lucideChevronRight, lucideLogOut, lucideDownload, lucideUserRoundX, lucideCircleUserRound })],
   templateUrl: './profile-page.html',
   styleUrl: './profile-page.css',

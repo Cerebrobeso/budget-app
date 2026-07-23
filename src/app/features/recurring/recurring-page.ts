@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MaskitoDirective } from '@maskito/angular';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -15,11 +15,13 @@ import {
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
+import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
 import { HlmTabsImports } from '@spartan-ng/helm/tabs';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
+import { toast } from '@spartan-ng/brain/sonner';
 
 @Component({
   selector: 'app-recurring-page',
@@ -32,6 +34,7 @@ import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
     HlmCard,
     HlmInput,
     HlmLabel,
+    ...HlmDialogImports,
     ...HlmSelectImports,
     ...HlmDatePickerImports,
     ...HlmTabsImports,
@@ -47,6 +50,9 @@ export class RecurringPage {
 
   protected readonly amountMask = AMOUNT_MASK;
   protected readonly fmt = eur;
+
+  readonly deleting = signal<RecurringRule | null>(null);
+  private readonly deleteDialog = viewChild.required<HlmDialog>('deleteDialog');
 
   readonly type = signal<TransactionType | null>(null);
   readonly amountText = signal('');
@@ -119,6 +125,38 @@ export class RecurringPage {
   archivedLabel(rule: RecurringRule): string {
     const p = this.progress(rule);
     return p && p.index >= p.total ? 'Completata' : 'In pausa';
+  }
+
+  pause(rule: RecurringRule): void {
+    this.store.setArchived(rule.id, true);
+    toast.message('Regola ricorrente messa in pausa.');
+  }
+
+  reactivate(rule: RecurringRule): void {
+    this.store.setArchived(rule.id, false);
+    toast.message('Regola ricorrente riattivata.');
+  }
+
+  askDelete(rule: RecurringRule): void {
+    this.deleting.set(rule);
+    this.deleteDialog().open();
+  }
+
+  /** L'"Annulla" nel toast ripristina la regola esatta appena rimossa: nessuna persistenza, sparisce al reload. */
+  confirmDelete(): void {
+    const rule = this.deleting();
+    if (!rule) return;
+    this.store.remove(rule.id);
+    this.deleteDialog().close({});
+    this.deleting.set(null);
+
+    toast.message('Regola ricorrente eliminata.', {
+      duration: 6000,
+      action: {
+        label: 'Annulla',
+        onClick: () => this.store.restore(rule),
+      },
+    });
   }
 
   add(): void {
