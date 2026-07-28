@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 import type { AssetSnapshot, Category, RecurringRule, SubcategoryOverlay, Transaction } from './models';
 import { Asset } from './models';
 import { BudgetRepository, BUDGET_REPOSITORY } from './repository';
-import { CategoryStore, latest, returnPct } from './stores';
+import { CategoryStore, latest, returnPct, TransactionStore } from './stores';
 
 function snap(date: string, value: number): AssetSnapshot {
   return { date, value };
@@ -56,11 +56,14 @@ class FakeBudgetRepository implements BudgetRepository {
   categories: Category[] = [];
   overlays: SubcategoryOverlay[] = [];
   failNextWrite = false;
+  failAddTransactionWhen: ((tx: Transaction) => boolean) | null = null;
 
   async loadTransactions(): Promise<Transaction[] | null> {
     return [];
   }
-  async addTransaction(): Promise<void> {}
+  async addTransaction(tx: Transaction): Promise<void> {
+    if (this.failAddTransactionWhen?.(tx)) throw new Error('boom');
+  }
   async updateTransaction(): Promise<void> {}
   async removeTransaction(): Promise<void> {}
 
@@ -183,5 +186,67 @@ describe('CategoryStore', () => {
 
     expect(store.categories()[0].subcategories.map((s) => s.name)).toEqual(['Varie']);
     expect(store.subcategoryOverlays()).toEqual([]);
+  });
+});
+
+function newTx(overrides: Partial<Omit<Transaction, 'id'>> = {}): Omit<Transaction, 'id'> {
+  return {
+    date: '2024-03-15',
+    type: 'expense',
+    amount: 10,
+    categoryId: 'cat1',
+    subcategoryId: null,
+    description: 'Riga',
+    recurringRuleId: null,
+    tag: null,
+    ...overrides,
+  };
+}
+
+describe('TransactionStore.addMany', () => {
+  let repo: FakeBudgetRepository;
+  let store: TransactionStore;
+
+  beforeEach(async () => {
+    repo = new FakeBudgetRepository();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: BUDGET_REPOSITORY, useValue: repo },
+        { provide: AuthService, useValue: { user: signal({ id: 'u1' }), ready: signal(true) } },
+      ],
+    });
+    store = TestBed.inject(TransactionStore);
+    // Lascia risolvere il reload iniziale innescato dall'effect in ready()/user().
+    await Promise.resolve();
+    TestBed.flushEffects();
+    await Promise.resolve();
+  });
+
+  it('adds every transaction when all repository writes succeed', async () => {
+    const items = [newTx({ description: 'Uno' }), newTx({ description: 'Due' }), newTx({ description: 'Tre' })];
+
+    const result = await store.addMany(items);
+
+    expect(result.failedCount).toBe(0);
+    expect(result.addedIds.length).toBe(3);
+    expect(store.transactions().map((t) => t.description).sort()).toEqual(['Due', 'Tre', 'Uno']);
+  });
+
+  it('rolls back only the transaction whose repository write fails, keeping the others', async () => {
+    repo.failAddTransactionWhen = (tx) => tx.description === 'Fallisce';
+    const items = [
+      newTx({ description: 'Uno' }),
+      newTx({ description: 'Fallisce', amount: 999 }),
+      newTx({ description: 'Tre' }),
+    ];
+
+    const result = await store.addMany(items);
+
+    expect(result.failedCount).toBe(1);
+    expect(result.addedIds.length).toBe(2);
+    const descriptions = store.transactions().map((t) => t.description);
+    expect(descriptions).toContain('Uno');
+    expect(descriptions).toContain('Tre');
+    expect(descriptions).not.toContain('Fallisce');
   });
 });

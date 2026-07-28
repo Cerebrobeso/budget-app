@@ -45,6 +45,12 @@ export const routes: Routes = [
     title: 'Ricorrenti | Registro',
   },
   {
+    path: 'importa-estratto-conto',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/import-statement/import-statement-page').then((m) => m.ImportStatementPage),
+    title: 'Importa estratto conto | Registro',
+  },
+  {
     path: '**',
     loadComponent: () => import('./features/not-found/not-found-page').then((m) => m.NotFoundPage),
     title: 'Pagina non trovata | Registro',

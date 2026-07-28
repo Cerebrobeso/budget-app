@@ -50,9 +50,6 @@
       "@spartan-ng/helm/card": [
         "./libs/ui/card/src/index.ts"
       ],
-      "@spartan-ng/helm/carousel": [
-        "./libs/ui/carousel/src/index.ts"
-      ],
       "@spartan-ng/helm/checkbox": [
         "./libs/ui/checkbox/src/index.ts"
       ],
@@ -130,9 +127,6 @@
       ],
       "@spartan-ng/helm/resizable": [
         "./libs/ui/resizable/src/index.ts"
-      ],
-      "@spartan-ng/helm/scroll-area": [
-        "./libs/ui/scroll-area/src/index.ts"
       ],
       "@spartan-ng/helm/select": [
         "./libs/ui/select/src/index.ts"

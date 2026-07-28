@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideX } from '@ng-icons/lucide';
+import { lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideUpload, lucideX } from '@ng-icons/lucide';
 import { Transaction, TransactionTag, TRANSACTION_TAG_LABEL, TRANSFER_CATEGORY_ID, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { eur, eurSigned, formatDayLabel, monthLongLabel, monthShortLabel } from '../../core/format';
@@ -28,6 +29,7 @@ interface DayGroup {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    RouterLink,
     HlmButton,
     ...HlmButtonGroupImports,
     HlmCard,
@@ -41,7 +43,7 @@ interface DayGroup {
     DatePipe
   ],
   providers: [
-    provideIcons({ lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideX }),
+    provideIcons({ lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideX, lucideUpload }),
   ],
   templateUrl: './log-page.html',
   styleUrl: './log-page.css',

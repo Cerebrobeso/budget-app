@@ -1,0 +1,249 @@
+<div class="mx-auto w-full">
+  <div class="mb-6 flex items-center gap-2">
+    <a hlmBtn variant="ghost" size="icon" routerLink="/movimenti" aria-label="Torna a Movimenti" hlmTooltip="Torna a Movimenti">
+      <ng-icon name="lucideChevronLeft" size="18" />
+    </a>
+    <h1 class="font-display text-2xl font-bold">Importa estratto conto</h1>
+  </div>
+
+  @if (step() === 'upload') {
+    <section hlmCard class="p-6 text-center">
+      <ng-icon name="lucideFileText" size="32" class="mx-auto mb-3 text-muted-foreground" />
+      <p class="mb-4 text-sm text-muted-foreground">
+        Carica l'estratto conto scaricato dalla tua banca in formato CSV o PDF (max 8MB). Il file viene elaborato solo nel browser.
+      </p>
+      <input #fileInput type="file" accept=".csv,.pdf,text/csv,application/pdf" hidden (change)="onFileSelected($event)" />
+      <button hlmBtn type="button" [disabled]="parsing()" (click)="fileInput.click()">
+        @if (parsing()) {
+          <hlm-spinner class="mr-2 text-[1rem]!" />
+          Lettura in corso…
+        } @else {
+          <ng-icon name="lucideUpload" size="16" class="mr-2" />
+          Scegli file
+        }
+      </button>
+      @if (fileError()) {
+        <p class="mt-4 text-sm text-expense" role="alert">{{ fileError() }}</p>
+      }
+    </section>
+  } @else if (step() === 'mapping') {
+    <section hlmCard class="p-6">
+      <p class="mb-4 text-sm text-muted-foreground">
+        {{ parsedRows()?.rows?.length ?? 0 }} righe trovate in "{{ file()?.name }}". Indica a quale campo corrisponde ogni colonna.
+      </p>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label hlmLabel for="map-date">Data</label>
+          <div hlmSelect [value]="dateColumnValue()" (valueChange)="dateColumn.set(toColumnIndex($event))" [itemToString]="columnLabelFor">
+            <hlm-select-trigger buttonId="map-date" class="w-full">
+              <span hlmSelectValue placeholder="Scegli colonna"></span>
+            </hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (label of columnLabels(); track $index) {
+                <hlm-select-item [value]="$index.toString()">{{ label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </div>
+        </div>
+        <div>
+          <label hlmLabel for="map-format">Formato data</label>
+          <div hlmSelect [value]="dateFormat()" (valueChange)="onDateFormatChange($event)" [itemToString]="dateFormatLabel">
+            <hlm-select-trigger buttonId="map-format" class="w-full">
+              <span hlmSelectValue></span>
+            </hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              <hlm-select-item value="dd/MM/yyyy">gg/mm/aaaa</hlm-select-item>
+              <hlm-select-item value="dd.MM.yyyy">gg.mm.aaaa</hlm-select-item>
+              <hlm-select-item value="yyyy-MM-dd">aaaa-mm-gg</hlm-select-item>
+            </hlm-select-content>
+          </div>
+        </div>
+        <div>
+          <label hlmLabel for="map-description">Descrizione</label>
+          <div hlmSelect [value]="descriptionColumnValue()" (valueChange)="descriptionColumn.set(toColumnIndex($event))" [itemToString]="columnLabelFor">
+            <hlm-select-trigger buttonId="map-description" class="w-full">
+              <span hlmSelectValue placeholder="Scegli colonna"></span>
+            </hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (label of columnLabels(); track $index) {
+                <hlm-select-item [value]="$index.toString()">{{ label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label hlmLabel>Importo</label>
+        <div hlmButtonGroup class="mb-3 w-full sm:w-auto">
+          <button hlmBtn type="button" size="sm" class="flex-1 sm:flex-initial" [variant]="amountMode() === 'signed' ? 'default' : 'outline'" (click)="amountMode.set('signed')">
+            Colonna singola (con segno)
+          </button>
+          <button hlmBtn type="button" size="sm" class="flex-1 sm:flex-initial" [variant]="amountMode() === 'debitCredit' ? 'default' : 'outline'" (click)="amountMode.set('debitCredit')">
+            Due colonne (Uscita/Entrata)
+          </button>
+        </div>
+
+        @if (amountMode() === 'signed') {
+          <div hlmSelect [value]="amountColumnValue()" (valueChange)="amountColumn.set(toColumnIndex($event))" [itemToString]="columnLabelFor">
+            <hlm-select-trigger buttonId="map-amount" class="w-full sm:w-64">
+              <span hlmSelectValue placeholder="Scegli colonna"></span>
+            </hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (label of columnLabels(); track $index) {
+                <hlm-select-item [value]="$index.toString()">{{ label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </div>
+        } @else {
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label hlmLabel for="map-debit" class="font-normal text-muted-foreground">Uscita (Dare)</label>
+              <div hlmSelect [value]="debitColumnValue()" (valueChange)="debitColumn.set(toColumnIndex($event))" [itemToString]="columnLabelFor">
+                <hlm-select-trigger buttonId="map-debit" class="w-full">
+                  <span hlmSelectValue placeholder="Scegli colonna"></span>
+                </hlm-select-trigger>
+                <hlm-select-content *hlmSelectPortal>
+                  @for (label of columnLabels(); track $index) {
+                    <hlm-select-item [value]="$index.toString()">{{ label }}</hlm-select-item>
+                  }
+                </hlm-select-content>
+              </div>
+            </div>
+            <div>
+              <label hlmLabel for="map-credit" class="font-normal text-muted-foreground">Entrata (Avere)</label>
+              <div hlmSelect [value]="creditColumnValue()" (valueChange)="creditColumn.set(toColumnIndex($event))" [itemToString]="columnLabelFor">
+                <hlm-select-trigger buttonId="map-credit" class="w-full">
+                  <span hlmSelectValue placeholder="Scegli colonna"></span>
+                </hlm-select-trigger>
+                <hlm-select-content *hlmSelectPortal>
+                  @for (label of columnLabels(); track $index) {
+                    <hlm-select-item [value]="$index.toString()">{{ label }}</hlm-select-item>
+                  }
+                </hlm-select-content>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (sampleRows().length > 0) {
+        <div hlmTableContainer class="mt-6 max-h-64 rounded-md border border-border">
+          <table hlmTable>
+            <thead hlmTHead>
+              <tr hlmTr>
+                @for (label of columnLabels(); track $index) {
+                  <th hlmTh>{{ label }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody hlmTBody>
+              @for (row of sampleRows(); track $index) {
+                <tr hlmTr>
+                  @for (cell of row; track $index) {
+                    <td hlmTd>{{ cell }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="mt-6 flex justify-between gap-2">
+        <button hlmBtn variant="outline" (click)="backToUpload()">Indietro</button>
+        <button hlmBtn [disabled]="!mappingValid()" (click)="goToPreview()">Continua</button>
+      </div>
+    </section>
+  } @else if (step() === 'preview') {
+    <section hlmCard class="p-6">
+      <p class="mb-4 text-sm text-muted-foreground">
+        {{ selectedCount() }} di {{ previewRows().length }} selezionati · {{ duplicateCount() }} duplicati
+      </p>
+
+      <div hlmTableContainer class="max-h-112 rounded-md border border-border">
+        <table hlmTable>
+          <thead hlmTHead>
+            <tr hlmTr>
+              <th hlmTh></th>
+              <th hlmTh>Data</th>
+              <th hlmTh>Importo</th>
+              <th hlmTh>Descrizione</th>
+              <th hlmTh>Categoria</th>
+              <th hlmTh>Sottocategoria</th>
+              <th hlmTh>Stato</th>
+            </tr>
+          </thead>
+          <tbody hlmTBody>
+            @for (row of previewRows(); track row.rowIndex) {
+              <tr hlmTr>
+                <td hlmTd>
+                  <hlm-checkbox [checked]="row.selected" [disabled]="!isRowUsable(row)" (checkedChange)="toggleRowSelected(row)" />
+                </td>
+                <td hlmTd class="figure">{{ row.date ? (row.date | date: 'dd/MM/yyyy') : '—' }}</td>
+                <td hlmTd class="figure" [class.text-income]="row.type === 'income'" [class.text-expense]="row.type === 'expense'">
+                  @if (row.amount !== null) {
+                    {{ row.type === 'income' ? '+' : '−' }}{{ fmt(row.amount) }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td hlmTd class="max-w-sm whitespace-normal wrap-break-word">{{ row.description || '—' }}</td>
+                <td hlmTd>
+                  @if (row.categoryId) {
+                    <div hlmSelect [value]="row.categoryId" (valueChange)="onRowCategoryChange(row, $event)" [itemToString]="categoryLabel">
+                      <hlm-select-trigger class="w-40">
+                        <span hlmSelectValue></span>
+                      </hlm-select-trigger>
+                      <hlm-select-content *hlmSelectPortal>
+                        @for (cat of categoryOptions(row); track cat.id) {
+                          <hlm-select-item [value]="cat.id">{{ cat.name }}</hlm-select-item>
+                        }
+                      </hlm-select-content>
+                    </div>
+                  } @else {
+                    —
+                  }
+                </td>
+                <td hlmTd>
+                  @if (row.categoryId && subOptions(row).length > 0) {
+                    <div hlmSelect [value]="row.subcategoryId" (valueChange)="onRowSubChange(row, $event)" [itemToString]="subcategoryLabelFor(row)">
+                      <hlm-select-trigger class="w-40">
+                        <span hlmSelectValue placeholder="—"></span>
+                      </hlm-select-trigger>
+                      <hlm-select-content *hlmSelectPortal>
+                        @for (sub of subOptions(row); track sub.id) {
+                          <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
+                        }
+                      </hlm-select-content>
+                    </div>
+                  } @else {
+                    —
+                  }
+                </td>
+                <td hlmTd>
+                  @if (!isRowUsable(row)) {
+                    <span hlmBadge variant="destructive">Non interpretabile</span>
+                  } @else if (row.isDuplicateOfExisting || row.isDuplicateInBatch) {
+                    <span hlmBadge variant="outline">Duplicato</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-6 flex justify-between gap-2">
+        <button hlmBtn variant="outline" (click)="backToMapping()">Indietro</button>
+        <button hlmBtn [disabled]="selectedCount() === 0 || importing()" (click)="confirmImport()">
+          @if (importing()) {
+            <hlm-spinner class="mr-2 text-[1rem]!" />
+          }
+          Importa {{ selectedCount() }} movimenti
+        </button>
+      </div>
+    </section>
+  }
+</div>

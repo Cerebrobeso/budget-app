@@ -1,3 +1,5 @@
+import { dateToIso } from './format';
+
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
 /**
@@ -131,17 +133,10 @@ export interface Asset {
   snapshots: AssetSnapshot[];
 }
 
-export interface BudgetData {
-  transactions: Transaction[];
-  categories: Category[];
-  assets: Asset[];
-}
-
 export function uid(): string {
   return crypto.randomUUID();
 }
 
 export function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return dateToIso(new Date());
 }
