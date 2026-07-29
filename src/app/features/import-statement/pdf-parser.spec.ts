@@ -1,7 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import { groupTextItemsIntoRows, mergeContinuationRows, PdfTextItem } from './pdf-parser';
+import { groupTextItemsIntoRows, mergeContinuationRows, PdfTextItem, readPageTextItems } from './pdf-parser';
 
-// parsePdf() richiede pdf.js reale (parsing binario) — fuori scope per unit test, si testa solo la funzione pura sottostante.
+// parsePdf() richiede pdf.js reale (parsing binario) — fuori scope per unit test, si testano le funzioni sottostanti.
+
+describe('readPageTextItems', () => {
+  // Lo stream finto espone SOLO getReader(), senza Symbol.asyncIterator: è così che si comporta
+  // ReadableStream su Safari. Serve a far fallire il test se si torna a getTextContent()/for-await
+  // (il ReadableStream di Node è async-iterabile, quindi da solo non intercetterebbe la regressione).
+  function fakePage(chunks: { items: unknown[] }[]) {
+    let i = 0;
+    return {
+      streamTextContent: () => ({
+        getReader: () => ({
+          read: async () => (i < chunks.length ? { done: false, value: chunks[i++] } : { done: true, value: undefined }),
+          releaseLock: () => {},
+        }),
+      }),
+    } as never;
+  }
+
+  it('reads every chunk of the stream and skips items without text', async () => {
+    const page = fakePage([
+      {
+        items: [
+          { str: '01/03/2024', transform: [1, 0, 0, 1, 50, 700], width: 48 },
+          { type: 'beginMarkedContent' },
+          { str: '   ', transform: [1, 0, 0, 1, 90, 700], width: 8 },
+        ],
+      },
+      { items: [{ str: 'Spesa', transform: [1, 0, 0, 1, 150, 700], width: 26 }] },
+    ]);
+
+    expect(await readPageTextItems(page, 3)).toEqual([
+      { text: '01/03/2024', x: 50, y: 700, page: 3, width: 48 },
+      { text: 'Spesa', x: 150, y: 700, page: 3, width: 26 },
+    ]);
+  });
+});
 
 describe('groupTextItemsIntoRows', () => {
   it('returns an empty array for an empty input', () => {

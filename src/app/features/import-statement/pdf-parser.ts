@@ -135,6 +135,37 @@ export function mergeContinuationRows(rows: string[][]): string[][] {
   return merged;
 }
 
+/** Solo ciò che serve da PDFPageProxy: permette di testare la lettura senza pdf.js reale. */
+interface TextContentSource {
+  streamTextContent(): ReadableStream<{ items: unknown[] }>;
+}
+
+// Safari non implementa ReadableStream[Symbol.asyncIterator], quindi getTextContent() di pdf.js
+// (che usa `for await` sullo stream) lancia TypeError su iOS: leggiamo con getReader().
+// https://github.com/mozilla/pdf.js/issues/20973
+export async function readPageTextItems(page: TextContentSource, pageNum: number): Promise<PdfTextItem[]> {
+  const reader = page.streamTextContent().getReader();
+  const items: PdfTextItem[] = [];
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      for (const raw of value.items) {
+        if (!isTextItem(raw) || !raw.str.trim()) continue;
+        items.push({ text: raw.str, x: raw.transform[4], y: raw.transform[5], page: pageNum, width: raw.width });
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return items;
+}
+
+// Gli item di marked content non hanno né str né transform.
+function isTextItem(raw: unknown): raw is { str: string; transform: number[]; width: number } {
+  return typeof raw === 'object' && raw !== null && 'str' in raw && typeof raw.str === 'string';
+}
+
 let workerConfigured = false;
 
 // Import dinamico per non gonfiare il bundle di chi importa solo CSV. Nessun OCR: un PDF-scansione senza testo estraibile lancia un errore.
@@ -155,11 +186,7 @@ export async function parsePdf(file: File): Promise<ParsedRows> {
   const items: PdfTextItem[] = [];
   for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
     const page = await doc.getPage(pageNum);
-    const content = await page.getTextContent();
-    for (const raw of content.items) {
-      if (!('str' in raw) || typeof raw.str !== 'string' || !raw.str.trim()) continue;
-      items.push({ text: raw.str, x: raw.transform[4], y: raw.transform[5], page: pageNum, width: raw.width });
-    }
+    items.push(...(await readPageTextItems(page, pageNum)));
   }
 
   if (items.length === 0) {
