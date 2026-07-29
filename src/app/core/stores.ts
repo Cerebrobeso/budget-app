@@ -2,7 +2,7 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import type { User } from '@supabase/supabase-js';
 import { toast } from '@spartan-ng/brain/sonner';
 import { AuthService } from './auth.service';
-import { isoToDate } from './format';
+import { dateToIso, isoToDate } from './format';
 import {
   Asset,
   AssetSnapshot,
@@ -250,6 +250,21 @@ export class TransactionStore {
     );
   }
 
+  /** Nessun bulk insert lato Supabase: N addTransaction in parallelo, rollback solo delle righe fallite. */
+  async addMany(items: Omit<Transaction, 'id'>[]): Promise<{ addedIds: string[]; failedCount: number }> {
+    const newTxs: Transaction[] = items.map((tx) => ({ ...tx, id: uid() }));
+    this.transactions.update((list) => [...list, ...newTxs]);
+    const results = await Promise.allSettled(newTxs.map((tx) => this.repo.addTransaction(tx)));
+    const failedIds = new Set(newTxs.filter((_, i) => results[i].status === 'rejected').map((t) => t.id));
+    if (failedIds.size) {
+      this.transactions.update((list) => list.filter((t) => !failedIds.has(t.id)));
+    }
+    return {
+      addedIds: newTxs.filter((t) => !failedIds.has(t.id)).map((t) => t.id),
+      failedCount: failedIds.size,
+    };
+  }
+
   /** Sposta in blocco tutti i movimenti di una categoria su un'altra (la sottocategoria non si trasferisce). */
   reassignCategory(fromCategoryId: string, toCategoryId: string): void {
     for (const tx of this.transactions().filter((t) => t.categoryId === fromCategoryId)) {
@@ -275,7 +290,7 @@ function clampDay(year: number, month1: number, day: number): number {
 }
 
 function isoAt(year: number, month1: number, day: number): string {
-  return `${year}-${String(month1).padStart(2, '0')}-${String(clampDay(year, month1, day)).padStart(2, '0')}`;
+  return dateToIso(new Date(year, month1 - 1, clampDay(year, month1, day)));
 }
 
 /** "19º rata di 36" — o "<descrizione> — 19º rata di 36" se la regola ha una descrizione. */

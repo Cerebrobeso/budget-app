@@ -16,7 +16,7 @@ function isoShift(monthsBack: number): string {
   const d = new Date();
   d.setDate(1);
   d.setMonth(d.getMonth() - monthsBack);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  return dateToIso(d);
 }
 
 @Component({

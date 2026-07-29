@@ -18,7 +18,10 @@
             "browser": "src/main.ts",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
-            "assets": [{ "glob": "**/*", "input": "public" }],
+            "assets": [
+              { "glob": "**/*", "input": "public" },
+              { "glob": "pdf.worker.min.mjs", "input": "node_modules/pdfjs-dist/build", "output": "/" }
+            ],
             "styles": ["src/styles.css"]
           },
           "configurations": {

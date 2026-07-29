@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.6.0](https://github.com/Cerebrobeso/budget-app/compare/v1.5.1...v1.6.0) (2026-07-28)
+
+### Features
+
+* **import:** import statement movimenti da CSV/PDF con mapping colonne e dedup ([1d75a24](https://github.com/Cerebrobeso/budget-app/commit/1d75a24804813f860c19c06d9b1b85cf63a3f44f))
+* **recurring:** confirm dialog + undo on delete, pause/reactivate toasts ([f9a0b29](https://github.com/Cerebrobeso/budget-app/commit/f9a0b29ae9e660759c8d87e33372bf25ba8ff9a1))
+
+### Bug Fixes
+
+* **log:** use Tailwind v4 important-modifier syntax on clear-search button ([ec9f60e](https://github.com/Cerebrobeso/budget-app/commit/ec9f60e258ffa7173388199afcf9dae8baf5f756))
 ## [1.5.1](https://github.com/Cerebrobeso/budget-app/compare/v1.5.0...v1.5.1) (2026-07-23)
 
 ### Bug Fixes
