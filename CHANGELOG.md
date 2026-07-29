@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.6.1](https://github.com/Cerebrobeso/budget-app/compare/v1.6.0...v1.6.1) (2026-07-29)
+
+### Bug Fixes
+
+* **import:** leggi il testo PDF con getReader() invece di getTextContent() ([8262ab7](https://github.com/Cerebrobeso/budget-app/commit/8262ab7c1f7cc773af6eafa4cd3d44c268cf91ae)), references [mozilla/pdf.js#20973](https://github.com/Cerebrobeso/budget-app/issues/20973) [#21557](https://github.com/Cerebrobeso/budget-app/issues/21557)
 ## [1.6.0](https://github.com/Cerebrobeso/budget-app/compare/v1.5.1...v1.6.0) (2026-07-28)
 
 ### Features
