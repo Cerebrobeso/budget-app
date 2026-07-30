@@ -1,5 +1,5 @@
 import { ParsedRows } from './import-types';
-import { buildParsedRows, looksLikeAmount, looksLikeDate } from './row-utils';
+import { buildParsedRows, findHeaderRowIndex, looksLikeDate } from './row-utils';
 
 export interface PdfTextItem {
   text: string;
@@ -19,7 +19,6 @@ const ROW_Y_TOLERANCE = 3;
 // Basso perché usiamo la larghezza reale del testo (non una stima): due colonne header adiacenti
 // possono avere anche solo ~6pt di spazio tra loro (verificato su un estratto conto reale).
 const COLUMN_GAP_THRESHOLD = 5;
-const HEADER_SEARCH_LIMIT = 20;
 const MAX_CONTINUATION_LINES = 6;
 
 function groupItemsByRow(items: PdfTextItem[]): PdfTextItem[][] {
@@ -74,23 +73,6 @@ function realignToColumnBounds(rows: Cell[][], bounds: number[]): string[][] {
     }
     return out;
   });
-}
-
-// La riga con più celle tra le prime HEADER_SEARCH_LIMIT che non contenga valori simili a data/importo:
-// negli estratti conto PDF la precedono spesso blocchi di intestazione/riepilogo banca (una riga sola
-// ciascuno), quindi l'header tabellare NON è affidabilmente la riga 0. -1 se nessuna riga qualifica.
-function findHeaderRowIndex(rows: string[][]): number {
-  const limit = Math.min(rows.length, HEADER_SEARCH_LIMIT);
-  let bestIndex = -1;
-  let bestCellCount = 1;
-  for (let i = 0; i < limit; i++) {
-    const row = rows[i];
-    if (row.length <= bestCellCount) continue;
-    if (row.some((cell) => looksLikeAmount(cell) || looksLikeDate(cell))) continue;
-    bestIndex = i;
-    bestCellCount = row.length;
-  }
-  return bestIndex;
 }
 
 // Raggruppa per vicinanza di y (stessa pagina), poi divide in colonne per gap di x. Se si trova un

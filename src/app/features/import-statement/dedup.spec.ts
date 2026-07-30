@@ -62,6 +62,24 @@ describe('markDuplicates', () => {
     expect(result.selected).toBe(true);
   });
 
+  it('does not flag two same-day, same-amount rows with different descriptions as in-batch duplicates', () => {
+    const rows = markDuplicates([row({ description: 'Caffè bar Centrale' }), row({ description: 'Caffè bar Roma' })], []);
+    expect(rows.every((r) => !r.isDuplicateInBatch)).toBe(true);
+    expect(rows.every((r) => r.selected)).toBe(true);
+  });
+
+  it('matches existing transactions by count: one saved, two in the file -> only one is a duplicate', () => {
+    const rows = markDuplicates([row({ description: 'Prima' }), row({ description: 'Seconda' })], [tx()]);
+    expect(rows[0].isDuplicateOfExisting).toBe(true);
+    expect(rows[1].isDuplicateOfExisting).toBe(false);
+    expect(rows[1].selected).toBe(true);
+  });
+
+  it('flags both rows when the same movement is already saved twice', () => {
+    const rows = markDuplicates([row({ description: 'Prima' }), row({ description: 'Seconda' })], [tx(), tx({ id: 't2' })]);
+    expect(rows.every((r) => r.isDuplicateOfExisting)).toBe(true);
+  });
+
   it('never selects a row with a null date/amount/type, even though it is not flagged as a duplicate', () => {
     const [result] = markDuplicates([row({ date: null, amount: null, type: null })], [tx()]);
     expect(result.isDuplicateOfExisting).toBe(false);

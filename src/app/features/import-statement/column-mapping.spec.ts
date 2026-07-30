@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { guessFieldMapping, mapRows, parseRowAmount, parseRowDate } from './column-mapping';
+import {
+  guessDateFormat,
+  guessDecimalSeparator,
+  guessFieldMapping,
+  isSummaryRow,
+  mapRows,
+  parseRowAmount,
+  parseRowDate,
+} from './column-mapping';
 import { FieldMapping, ParsedRows } from './import-types';
 
 describe('guessFieldMapping', () => {
@@ -112,6 +120,71 @@ describe('parseRowAmount', () => {
   it('returns null for an empty cell', () => {
     expect(parseRowAmount('')).toBeNull();
   });
+
+  it('ignores a minus inside the text, which belongs to a code and not to the sign', () => {
+    expect(parseRowAmount('COD-123')).toBe(123);
+  });
+
+  it('uses the column-level decimal separator when given, treating the other one as thousands', () => {
+    expect(parseRowAmount('1.234', ',')).toBe(1234);
+    expect(parseRowAmount('1,234', '.')).toBe(1234);
+    expect(parseRowAmount('1.234,56', ',')).toBe(1234.56);
+  });
+});
+
+describe('guessDecimalSeparator', () => {
+  it('picks the rightmost separator when a cell contains both', () => {
+    expect(guessDecimalSeparator(['1.234,56', '900'])).toBe(',');
+    expect(guessDecimalSeparator(['1,234.56', '900'])).toBe('.');
+  });
+
+  it('reads a separator followed by two digits as the decimal one', () => {
+    expect(guessDecimalSeparator(['12,50', '3,00'])).toBe(',');
+  });
+
+  it('infers thousands grouping when every separator is followed by exactly three digits', () => {
+    // Il caso che senza consenso di colonna diventava un errore di 1000x: "1.234" -> 1.234.
+    expect(guessDecimalSeparator(['1.234', '5.678'])).toBe(',');
+  });
+
+  it('returns null when the column gives no usable clue', () => {
+    expect(guessDecimalSeparator(['100', '250', ''])).toBeNull();
+  });
+});
+
+describe('guessDateFormat', () => {
+  it.each([
+    ['15/03/2024', 'dd/MM/yyyy'],
+    ['15.03.2024', 'dd.MM.yyyy'],
+    ['15-03-2024', 'dd-MM-yyyy'],
+    ['15/03/24', 'dd/MM/yy'],
+    ['2024-03-15', 'yyyy-MM-dd'],
+  ])('detects %s as %s', (cell, expected) => {
+    expect(guessDateFormat([cell, cell])).toBe(expected);
+  });
+
+  it('picks the format that parses the most cells, ignoring dirty ones', () => {
+    expect(guessDateFormat(['01.06.2024', 'non una data', '02.06.2024'])).toBe('dd.MM.yyyy');
+  });
+
+  it('falls back to the first option when nothing parses', () => {
+    expect(guessDateFormat(['abc', ''])).toBe('dd/MM/yyyy');
+  });
+});
+
+describe('isSummaryRow', () => {
+  it.each([
+    ['SALDO INIZIALE', '1.000,00'],
+    ['Saldo finale al 30/06/2024', '1.150,00'],
+    ['Totale movimenti dare', '250,00'],
+    ['A riportare', '900,00'],
+  ])('recognizes the summary row "%s"', (label, amount) => {
+    expect(isSummaryRow([label, amount])).toBe(true);
+  });
+
+  it('does not mistake a real transaction that merely mentions "saldo" for a summary row', () => {
+    expect(isSummaryRow(['01/06/2024', '120,00', 'SALDO CARTA DI CREDITO'])).toBe(false);
+  });
 });
 
 describe('mapRows', () => {
@@ -164,6 +237,28 @@ describe('mapRows', () => {
   it('leaves description empty when descriptionColumn is null', () => {
     const [row] = mapRows(parsed, { ...mapping, descriptionColumn: null });
     expect(row.description).toBe('');
+  });
+
+  it('drops summary rows so that importing them does not double the monthly totals', () => {
+    const withSummary: ParsedRows = {
+      ...parsed,
+      rows: [...parsed.rows, ['30/03/2024', '2.000,00', 'SALDO FINALE']],
+    };
+    const rows = mapRows(withSummary, mapping);
+    expect(rows).toHaveLength(3);
+    expect(rows.some((r) => r.description === 'SALDO FINALE')).toBe(false);
+  });
+
+  it('applies the column-level decimal separator, so dot-grouped thousands are not read as decimals', () => {
+    const thousands: ParsedRows = {
+      ...parsed,
+      rows: [
+        ['15/03/2024', '1.234', 'Stipendio'],
+        ['16/03/2024', '5.678', 'Bonifico'],
+      ],
+    };
+    const [first] = mapRows(thousands, mapping);
+    expect(first.amount).toBe(1234);
   });
 });
 

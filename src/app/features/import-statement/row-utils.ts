@@ -1,8 +1,10 @@
 import { ParsedRows } from './import-types';
 
-const AMOUNT_PATTERN = /^[+\-(]?\s*[$€]?\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?\s*[$€)]?$/;
+// Parte intera \d+ e non \d{1,3}: i fogli XLS producono numeri già formattati come "12345.67", senza separatore migliaia.
+const AMOUNT_PATTERN = /^[+\-(]?\s*[$€]?\s*\d+(?:[.,]\d{3})*(?:[.,]\d{1,2})?\s*[$€]?\s*[-)]?$/;
 // '.' incluso come separatore: molti estratti conto italiani usano gg.mm.aaaa, non solo gg/mm/aaaa.
 const DATE_PATTERN = /^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$/;
+const HEADER_SEARCH_LIMIT = 20;
 
 export function looksLikeAmount(cell: string): boolean {
   const trimmed = cell.trim();
@@ -11,6 +13,28 @@ export function looksLikeAmount(cell: string): boolean {
 
 export function looksLikeDate(cell: string): boolean {
   return DATE_PATTERN.test(cell.trim());
+}
+
+/**
+ * Indice della riga con più celle valorizzate tra le prime HEADER_SEARCH_LIMIT che non contenga
+ * valori simili a data/importo. L'header tabellare NON è affidabilmente la riga 0: PDF, XLS e CSV
+ * bancari fanno precedere alla tabella blocchi di intestazione o riepilogo (banca, IBAN, periodo,
+ * saldo iniziale). -1 se nessuna riga qualifica.
+ */
+export function findHeaderRowIndex(rows: string[][]): number {
+  const limit = Math.min(rows.length, HEADER_SEARCH_LIMIT);
+  let bestIndex = -1;
+  let bestCellCount = 1;
+  for (let i = 0; i < limit; i++) {
+    const row = rows[i];
+    // Celle valorizzate e non row.length: dopo il padding tutte le righe hanno la stessa lunghezza.
+    const filled = row.filter((cell) => cell.trim()).length;
+    if (filled <= bestCellCount) continue;
+    if (row.some((cell) => looksLikeAmount(cell) || looksLikeDate(cell))) continue;
+    bestIndex = i;
+    bestCellCount = filled;
+  }
+  return bestIndex;
 }
 
 // Header presente se una cella della prima riga non somiglia a importo/data mentre la stessa colonna, in righe successive, sì.
@@ -35,12 +59,16 @@ export function buildParsedRows(rows: string[][]): ParsedRows {
     return padded;
   });
 
-  const hasHeader = detectHeaderRow(normalized);
-  const headers = hasHeader ? normalized[0] : null;
-  const dataRows = hasHeader ? normalized.slice(1) : normalized;
+  const headerIndex = findHeaderRowIndex(normalized);
+  // Doppia conferma: la riga candidata è un header solo se sotto di sé ci sono davvero dati,
+  // altrimenti un file di solo testo libero produrrebbe sempre un header fittizio.
+  const hasHeader = headerIndex !== -1 && detectHeaderRow(normalized.slice(headerIndex));
+  const headers = hasHeader ? normalized[headerIndex] : null;
+  const preamble = hasHeader ? normalized.slice(0, headerIndex) : [];
+  const dataRows = hasHeader ? normalized.slice(headerIndex + 1) : normalized;
   const columnLabels = headers
     ? headers.map((h, i) => h.trim() || `Colonna ${i + 1}`)
     : Array.from({ length: maxCols }, (_, i) => `Colonna ${i + 1}`);
 
-  return { headers, rows: dataRows, columnLabels };
+  return { headers, rows: dataRows, columnLabels, preamble };
 }

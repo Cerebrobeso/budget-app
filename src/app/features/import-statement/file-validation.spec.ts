@@ -18,11 +18,31 @@ describe('validateStatementFile', () => {
   });
 
   it('rejects a file with an unsupported extension', async () => {
-    const file = new File(['col1,col2\n1,2'], 'estratto.xlsx', {
+    const file = new File(['contenuto'], 'estratto.docx', {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    const result = await validateStatementFile(file);
+    expect(result).toEqual({ ok: false, error: 'Formato non supportato: carica un file CSV, XLS o PDF.' });
+  });
+
+  it('accepts a .csv whose MIME Windows reports as Excel (extension wins over MIME)', async () => {
+    const file = new File(['Data,Importo\n01/01/2024,100,00'], 'estratto.csv', {
       type: 'application/vnd.ms-excel',
     });
     const result = await validateStatementFile(file);
-    expect(result).toEqual({ ok: false, error: 'Formato non supportato: carica un file CSV o PDF.' });
+    expect(result).toEqual({ ok: true, kind: 'csv' });
+  });
+
+  it('accepts an .xlsx by its zip magic bytes', async () => {
+    const file = new File([new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00])], 'estratto.xlsx', { type: '' });
+    const result = await validateStatementFile(file);
+    expect(result).toEqual({ ok: true, kind: 'xls' });
+  });
+
+  it('accepts an .xls that is really an HTML table (common in Italian bank exports)', async () => {
+    const file = new File(['<html><table><tr><td>Data</td></tr></table></html>'], 'estratto.xls', { type: '' });
+    const result = await validateStatementFile(file);
+    expect(result).toEqual({ ok: true, kind: 'xls' });
   });
 
   it('rejects a CSV-named file whose content contains a null byte', async () => {

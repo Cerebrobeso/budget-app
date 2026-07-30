@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildParsedRows, detectHeaderRow, looksLikeAmount, looksLikeDate } from './row-utils';
+import { buildParsedRows, detectHeaderRow, findHeaderRowIndex, looksLikeAmount, looksLikeDate } from './row-utils';
 
 describe('looksLikeAmount', () => {
   it.each(['120,00', '1.234,56', '-50', '-50,00'])('recognizes plain amount-like cell %s', (cell) => {
@@ -11,8 +11,12 @@ describe('looksLikeAmount', () => {
     expect(looksLikeAmount('(120,00)')).toBe(true);
   });
 
-  it('does not recognize a trailing-minus-sign amount (not covered by the heuristic)', () => {
-    expect(looksLikeAmount('120,00-')).toBe(false);
+  it('recognizes a trailing-minus-sign amount, like parseRowAmount does', () => {
+    expect(looksLikeAmount('120,00-')).toBe(true);
+  });
+
+  it('recognizes an unseparated amount, as produced by a spreadsheet cell', () => {
+    expect(looksLikeAmount('12345.67')).toBe(true);
   });
 
   it('returns false for non-numeric free text', () => {
@@ -58,7 +62,42 @@ describe('detectHeaderRow', () => {
   });
 });
 
+describe('findHeaderRowIndex', () => {
+  it('finds the header below the bank letterhead instead of assuming row 0', () => {
+    const rows = [
+      ['Banca Esempio SpA', '', '', ''],
+      ['IBAN IT60X0542811101000000123456', '', '', ''],
+      ['Data', 'Dare', 'Avere', 'Descrizione'],
+      ['01/06/2024', '135,27', '', 'Addebito RID'],
+    ];
+    expect(findHeaderRowIndex(rows)).toBe(2);
+  });
+
+  it('returns -1 when no row qualifies as a header', () => {
+    expect(findHeaderRowIndex([['01/06/2024', '135,27']])).toBe(-1);
+  });
+});
+
 describe('buildParsedRows', () => {
+  it('skips the preamble rows and keeps them aside, so the balances stay readable', () => {
+    const result = buildParsedRows([
+      ['Estratto conto giugno 2024', ''],
+      ['Saldo iniziale', '1.000,00'],
+      ['Data', 'Importo'],
+      ['01/06/2024', '-135,27'],
+      ['04/06/2024', '440,00'],
+    ]);
+    expect(result.columnLabels).toEqual(['Data', 'Importo']);
+    expect(result.rows).toEqual([
+      ['01/06/2024', '-135,27'],
+      ['04/06/2024', '440,00'],
+    ]);
+    expect(result.preamble).toEqual([
+      ['Estratto conto giugno 2024', ''],
+      ['Saldo iniziale', '1.000,00'],
+    ]);
+  });
+
   it('pads rows of differing length to the max column count', () => {
     const result = buildParsedRows([
       ['Data', 'Importo', 'Descrizione'],

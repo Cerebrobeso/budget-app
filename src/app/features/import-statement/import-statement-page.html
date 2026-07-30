@@ -10,9 +10,9 @@
     <section hlmCard class="p-6 text-center">
       <ng-icon name="lucideFileText" size="32" class="mx-auto mb-3 text-muted-foreground" />
       <p class="mb-4 text-sm text-muted-foreground">
-        Carica l'estratto conto scaricato dalla tua banca in formato CSV o PDF (max 8MB). Il file viene elaborato solo nel browser.
+        Carica l'estratto conto scaricato dalla tua banca in formato CSV, XLS o PDF (max 8MB). Il file viene elaborato solo nel browser.
       </p>
-      <input #fileInput type="file" accept=".csv,.pdf,text/csv,application/pdf" hidden (change)="onFileSelected($event)" />
+      <input #fileInput type="file" accept=".csv,.txt,.xls,.xlsx,.pdf" hidden (change)="onFileSelected($event)" />
       <button hlmBtn type="button" [disabled]="parsing()" (click)="fileInput.click()">
         @if (parsing()) {
           <hlm-spinner class="mr-2 text-[1rem]!" />
@@ -30,6 +30,9 @@
     <section hlmCard class="p-6">
       <p class="mb-4 text-sm text-muted-foreground">
         {{ parsedRows()?.rows?.length ?? 0 }} righe trovate in "{{ file()?.name }}". Indica a quale campo corrisponde ogni colonna.
+        @if (bankProfile(); as profile) {
+          <span hlmBadge variant="outline" class="ml-2">Rilevato: {{ profile.label }}</span>
+        }
       </p>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -53,9 +56,9 @@
               <span hlmSelectValue></span>
             </hlm-select-trigger>
             <hlm-select-content *hlmSelectPortal>
-              <hlm-select-item value="dd/MM/yyyy">gg/mm/aaaa</hlm-select-item>
-              <hlm-select-item value="dd.MM.yyyy">gg.mm.aaaa</hlm-select-item>
-              <hlm-select-item value="yyyy-MM-dd">aaaa-mm-gg</hlm-select-item>
+              @for (option of dateFormatOptions; track option) {
+                <hlm-select-item [value]="option">{{ dateFormatLabel(option) }}</hlm-select-item>
+              }
             </hlm-select-content>
           </div>
         </div>
@@ -161,6 +164,10 @@
       <p class="mb-4 text-sm text-muted-foreground">
         {{ selectedCount() }} di {{ previewRows().length }} selezionati · {{ duplicateCount() }} duplicati
       </p>
+
+      @if (balanceWarning()) {
+        <p class="mb-4 rounded-md border border-border bg-muted p-3 text-sm" role="alert">{{ balanceWarning() }}</p>
+      }
 
       <div hlmTableContainer class="max-h-112 rounded-md border border-border">
         <table hlmTable>

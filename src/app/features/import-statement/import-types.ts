@@ -2,9 +2,19 @@ export interface ParsedRows {
   headers: string[] | null;
   rows: string[][];
   columnLabels: string[];
+  /** Righe che precedono l'header (intestazione banca, IBAN, periodo, saldi): non sono movimenti ma contengono i saldi. */
+  preamble?: string[][];
 }
 
-export type DateFormatOption = 'dd/MM/yyyy' | 'dd.MM.yyyy' | 'yyyy-MM-dd';
+export type DateFormatOption = 'dd/MM/yyyy' | 'dd.MM.yyyy' | 'dd-MM-yyyy' | 'dd/MM/yy' | 'yyyy-MM-dd';
+
+export const DATE_FORMAT_OPTIONS: DateFormatOption[] = [
+  'dd/MM/yyyy',
+  'dd.MM.yyyy',
+  'dd-MM-yyyy',
+  'dd/MM/yy',
+  'yyyy-MM-dd',
+];
 
 // 'signed': una colonna con segno (+/-). 'debitCredit': due colonne separate (es. Dare/Avere, Uscita/Entrata), mai firmate.
 export type AmountMappingMode = 'signed' | 'debitCredit';

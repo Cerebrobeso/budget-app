@@ -17,18 +17,31 @@ import { lucideChevronLeft, lucideFileText, lucideUpload } from '@ng-icons/lucid
 import { Transaction } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { eur } from '../../core/format';
+import { eurSigned } from '../../core/format';
 import { validateStatementFile, decodeTextFile } from './file-validation';
 import { parseCsv } from './csv-parser';
 import { parsePdf } from './pdf-parser';
-import { guessFieldMapping, mapRows } from './column-mapping';
+import { parseXls } from './xls-parser';
+import { guessDateFormat, guessFieldMapping, mapRows } from './column-mapping';
+import { BankProfile, matchBankProfile } from './bank-profiles';
+import { checkBalance, extractBalances } from './balance-check';
 import { markDuplicates } from './dedup';
-import { AmountMappingMode, DateFormatOption, FieldMapping, ParsedRows, ParsedTransactionRow } from './import-types';
+import {
+  AmountMappingMode,
+  DATE_FORMAT_OPTIONS,
+  DateFormatOption,
+  FieldMapping,
+  ParsedRows,
+  ParsedTransactionRow,
+} from './import-types';
 
 type ImportStep = 'upload' | 'mapping' | 'preview';
 
 const DATE_FORMAT_LABELS: Record<DateFormatOption, string> = {
   'dd/MM/yyyy': 'gg/mm/aaaa',
   'dd.MM.yyyy': 'gg.mm.aaaa',
+  'dd-MM-yyyy': 'gg-mm-aaaa',
+  'dd/MM/yy': 'gg/mm/aa',
   'yyyy-MM-dd': 'aaaa-mm-gg',
 };
 
@@ -82,7 +95,10 @@ export class ImportStatementPage {
   readonly columnLabels = computed(() => this.parsedRows()?.columnLabels ?? []);
   readonly sampleRows = computed(() => this.parsedRows()?.rows.slice(0, 5) ?? []);
 
+  readonly bankProfile = signal<BankProfile | null>(null);
   readonly previewRows = signal<ParsedTransactionRow[]>([]);
+  readonly balanceWarning = signal<string>('');
+  protected readonly dateFormatOptions = DATE_FORMAT_OPTIONS;
   readonly selectedCount = computed(() => this.previewRows().filter((r) => r.selected).length);
   readonly duplicateCount = computed(
     () => this.previewRows().filter((r) => r.isDuplicateOfExisting || r.isDuplicateInBatch).length,
@@ -120,16 +136,27 @@ export class ImportStatementPage {
       }
 
       const parsed =
-        validation.kind === 'csv' ? parseCsv(decodeTextFile(await file.arrayBuffer())) : await parsePdf(file);
+        validation.kind === 'csv'
+          ? parseCsv(decodeTextFile(await file.arrayBuffer()))
+          : validation.kind === 'xls'
+            ? await parseXls(file)
+            : await parsePdf(file);
 
       this.parsedRows.set(parsed);
-      const guess = guessFieldMapping(parsed.columnLabels, parsed.headers !== null);
+      const profile = parsed.headers !== null ? matchBankProfile(parsed.columnLabels) : null;
+      this.bankProfile.set(profile);
+
+      const guess = { ...guessFieldMapping(parsed.columnLabels, parsed.headers !== null), ...profile?.mapping };
       this.dateColumn.set(guess.dateColumn);
       this.descriptionColumn.set(guess.descriptionColumn);
       this.amountMode.set(guess.amountMode);
       this.amountColumn.set(guess.amountColumn);
       this.debitColumn.set(guess.debitColumn);
       this.creditColumn.set(guess.creditColumn);
+      this.dateFormat.set(
+        profile?.dateFormat ??
+          guessDateFormat(guess.dateColumn !== null ? parsed.rows.map((row) => row[guess.dateColumn!] ?? '') : []),
+      );
       this.step.set('mapping');
     } catch (err) {
       this.fileError.set(err instanceof Error ? err.message : 'Impossibile leggere il file.');
@@ -145,8 +172,8 @@ export class ImportStatementPage {
   }
 
   onDateFormatChange(value: unknown): void {
-    if (value === 'dd/MM/yyyy' || value === 'dd.MM.yyyy' || value === 'yyyy-MM-dd') {
-      this.dateFormat.set(value);
+    if (DATE_FORMAT_OPTIONS.includes(value as DateFormatOption)) {
+      this.dateFormat.set(value as DateFormatOption);
     }
   }
 
@@ -174,6 +201,16 @@ export class ImportStatementPage {
         return { ...row, categoryId: category.id, subcategoryId: null };
       }),
     );
+
+    // Sui movimenti interpretati, non su quelli selezionati: deselezionare un duplicato non deve
+    // far scattare un falso allarme sui saldi.
+    const balances = extractBalances(parsed.preamble ?? [], parsed.rows);
+    const check = balances ? checkBalance(balances, mapped) : null;
+    this.balanceWarning.set(
+      check && !check.ok
+        ? `I saldi dichiarati nel file non tornano: differenza di ${eurSigned(check.diff)}. Controlla le righe non interpretabili prima di importare.`
+        : '',
+    );
     this.step.set('preview');
   }
 
@@ -191,7 +228,9 @@ export class ImportStatementPage {
     this.debitColumn.set(null);
     this.creditColumn.set(null);
     this.descriptionColumn.set(null);
+    this.bankProfile.set(null);
     this.previewRows.set([]);
+    this.balanceWarning.set('');
     this.step.set('upload');
   }
 
