@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.7.0](https://github.com/Cerebrobeso/budget-app/compare/v1.6.1...v1.7.0) (2026-08-01)
+
+### Features
+
+* **categories:** admin-only access lockdown and drag-and-drop reordering ([1c5b9d9](https://github.com/Cerebrobeso/budget-app/commit/1c5b9d9452e3a80c5c1a01cfd964e81314a0b361))
 ## [1.6.1](https://github.com/Cerebrobeso/budget-app/compare/v1.6.0...v1.6.1) (2026-07-29)
 
 ### Bug Fixes
