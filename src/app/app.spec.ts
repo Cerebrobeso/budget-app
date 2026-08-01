@@ -8,7 +8,7 @@ import { AuthService } from './core/auth.service';
 import { CategoryStore, PortfolioStore, RecurringStore, ThemeService, TransactionStore } from './core/stores';
 
 function fakeStore(ready: boolean) {
-  return { ready: signal(ready) };
+  return { ready: signal(ready), isAdmin: signal(false) };
 }
 
 function fakeRouter(url = '/movimenti') {

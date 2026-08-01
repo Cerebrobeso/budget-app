@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthService } from './auth.service';
 import type { AssetSnapshot, Category, RecurringRule, SubcategoryOverlay, Transaction } from './models';
-import { Asset } from './models';
+import { Asset, CATEGORY_ADMIN_UID } from './models';
 import { BudgetRepository, BUDGET_REPOSITORY } from './repository';
 import { CategoryStore, latest, returnPct, TransactionStore } from './stores';
 
@@ -185,6 +185,104 @@ describe('CategoryStore', () => {
     store.addSubcategory('cat2', 'Varie');
 
     expect(store.categories()[0].subcategories.map((s) => s.name)).toEqual(['Varie']);
+    expect(store.subcategoryOverlays()).toEqual([]);
+  });
+
+  it('is not admin for a regular user', () => {
+    expect(store.isAdmin()).toBe(false);
+  });
+
+  function cat(id: string, sortOrder?: number): Category {
+    return { id, name: id, kind: 'expense', color: '#000', subcategories: [], sortOrder };
+  }
+
+  it('orders categories without a sortOrder by their original position', () => {
+    store.categories.set([cat('a'), cat('b'), cat('c')]);
+    expect(store.active().map((c) => c.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('lets an explicit sortOrder interleave with categories that still lack one', () => {
+    // 'a' e 'c' non hanno sortOrder (posizione effettiva 0 e 200), 'b' vale 50: finisce in mezzo.
+    store.categories.set([cat('a'), cat('b', 50), cat('c')]);
+    expect(store.active().map((c) => c.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('moveCategory "before" inserts the dragged category between its new neighbours', () => {
+    store.categories.set([cat('a', 100), cat('b', 200), cat('c', 300)]);
+    store.moveCategory('c', 'b', 'before');
+    expect(store.active().map((x) => x.id)).toEqual(['a', 'c', 'b']);
+  });
+
+  it('moveCategory "after" moves the dragged category past its target', () => {
+    store.categories.set([cat('a', 100), cat('b', 200), cat('c', 300)]);
+    store.moveCategory('a', 'b', 'after');
+    expect(store.active().map((x) => x.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('moveCategory to the very start assigns an order below the current first category', () => {
+    store.categories.set([cat('a', 100), cat('b', 200), cat('c', 300)]);
+    store.moveCategory('c', 'a', 'before');
+    expect(store.active().map((x) => x.id)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('moveCategory to the very end assigns an order above the current last category', () => {
+    store.categories.set([cat('a', 100), cat('b', 200), cat('c', 300)]);
+    store.moveCategory('a', 'c', 'after');
+    expect(store.active().map((x) => x.id)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('moveCategory is a no-op when dragged onto itself', () => {
+    store.categories.set([cat('a', 100), cat('b', 200)]);
+    store.moveCategory('a', 'a', 'before');
+    expect(store.active().map((x) => x.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('CategoryStore as the category admin', () => {
+  let repo: FakeBudgetRepository;
+  let store: CategoryStore;
+
+  beforeEach(async () => {
+    repo = new FakeBudgetRepository();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: BUDGET_REPOSITORY, useValue: repo },
+        { provide: AuthService, useValue: { user: signal({ id: CATEGORY_ADMIN_UID }), ready: signal(true) } },
+      ],
+    });
+    store = TestBed.inject(CategoryStore);
+    await Promise.resolve();
+    TestBed.flushEffects();
+    await Promise.resolve();
+  });
+
+  it('is admin', () => {
+    expect(store.isAdmin()).toBe(true);
+  });
+
+  it('toggles a category as shared/default', async () => {
+    const cat: Category = { id: 'cat1', name: 'Alimentari', kind: 'expense', color: '#000', subcategories: [] };
+    store.categories.set([cat]);
+
+    store.setShared('cat1', true);
+
+    expect(store.categories()[0].shared).toBe(true);
+  });
+
+  it('adds a new subcategory on a shared category directly into its own subcategories array, not as an overlay', () => {
+    const shared: Category = {
+      id: 'cat1',
+      name: 'Alimentari',
+      kind: 'expense',
+      color: '#000',
+      shared: true,
+      subcategories: [],
+    };
+    store.categories.set([shared]);
+
+    store.addSubcategory('cat1', 'Ristoranti');
+
+    expect(store.categories()[0].subcategories.map((s) => s.name)).toEqual(['Ristoranti']);
     expect(store.subcategoryOverlays()).toEqual([]);
   });
 });

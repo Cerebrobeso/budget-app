@@ -35,9 +35,22 @@
     </div>
 
     @for (cat of store.active(); track cat.id) {
-      <div hlmCard class="mb-3 p-4">
+      <div hlmCard #catCard class="mb-3 p-4 transition-[transform,box-shadow,border-color,opacity] duration-150"
+           [attr.data-cat-id]="cat.id"
+           [class.border-primary]="dragOverId() === cat.id"
+           [class]="draggingId() === cat.id ? 'scale-[1.02] shadow-lg opacity-60' : ''"
+           [attr.draggable]="canReorder(cat) ? true : null"
+           (dragstart)="onDragStart(cat, $event)"
+           (dragover)="onDragOver(cat, $event)"
+           (drop)="onDrop(cat, $event)"
+           (dragend)="onDragEnd()">
         <div class="flex flex-wrap items-center gap-3">
-          @if (cat.shared) {
+          @if (canReorder(cat)) {
+            <span class="cursor-grab text-muted-foreground" [attr.aria-label]="'Riordina ' + cat.name">
+              <ng-icon name="lucideGripVertical" size="16" />
+            </span>
+          }
+          @if (cat.shared && !store.isAdmin()) {
             <span class="size-5 shrink-0 rounded-full" [style.background]="cat.color" [attr.aria-label]="'Colore di ' + cat.name"></span>
           } @else {
             <app-color-picker size="sm" [color]="cat.color" [usedColors]="otherColors(cat.id)" [ariaLabel]="'Colore di ' + cat.name"
@@ -55,7 +68,12 @@
             }
           }
           <div class="ml-auto flex gap-1">
-            @if (!cat.shared) {
+            @if (store.isAdmin()) {
+              <button hlmBtn variant="ghost" size="sm" (click)="store.setShared(cat.id, !cat.shared)">
+                {{ cat.shared ? 'Rimuovi da predefinite' : 'Rendi predefinita' }}
+              </button>
+            }
+            @if (!cat.shared || store.isAdmin()) {
               <button hlmBtn variant="ghost" size="sm" (click)="startEditCat(cat)">Rinomina</button>
               <button hlmBtn variant="ghost" size="sm" class="text-muted-foreground" (click)="store.setArchived(cat.id, true)">Archivia</button>
               <button hlmBtn variant="ghost" size="sm" class="text-expense" [attr.aria-label]="'Elimina ' + cat.name"
@@ -78,7 +96,7 @@
                   <button class="cursor-pointer font-semibold text-primary" (click)="saveSubName(cat, sub)">OK</button>
                 } @else {
                   {{ sub.name }}
-                  @if (!cat.shared || sub.overlay) {
+                  @if (!cat.shared || sub.overlay || store.isAdmin()) {
                     <button class="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
                             [attr.aria-label]="'Rinomina ' + sub.name" hlmTooltip="Rinomina" (click)="startEditSub(cat, sub)"><ng-icon name="lucidePencil" size="13" /></button>
                     <button class="cursor-pointer text-muted-foreground hover:text-expense"
@@ -112,7 +130,7 @@
       <div hlmCard class="mb-3 flex flex-wrap items-center gap-3 p-4 opacity-70">
         <span class="size-3 rounded-full" [style.background]="cat.color"></span>
         <h2 class="font-display text-lg font-bold">{{ cat.name }}</h2>
-        @if (!cat.shared) {
+        @if (!cat.shared || store.isAdmin()) {
           <div class="ml-auto flex gap-1">
             <button hlmBtn variant="outline" size="sm" (click)="store.setArchived(cat.id, false)">Ripristina</button>
             <button hlmBtn variant="ghost" size="sm" class="text-expense" [attr.aria-label]="'Elimina ' + cat.name" (click)="askDeleteCat(cat)">
@@ -126,7 +144,7 @@
       <div hlmCard class="mb-2 flex flex-wrap items-center gap-3 px-4 py-2 text-sm opacity-70">
         <span class="size-2.5 rounded-full" [style.background]="item.cat.color"></span>
         {{ item.cat.name }} · {{ item.sub.name }}
-        @if (!item.cat.shared || item.sub.overlay) {
+        @if (!item.cat.shared || item.sub.overlay || store.isAdmin()) {
           <button hlmBtn variant="outline" size="sm" class="ml-auto"
                   (click)="store.setSubArchived(item.cat.id, item.sub.id, false)">Ripristina</button>
         }

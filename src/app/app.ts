@@ -60,7 +60,7 @@ export class App {
   protected readonly appVersion = environment.appVersion;
   protected readonly theme = inject(ThemeService);
   protected readonly auth = inject(AuthService);
-  private readonly categoryStore = inject(CategoryStore);
+  protected readonly categoryStore = inject(CategoryStore);
   private readonly transactionStore = inject(TransactionStore);
   private readonly portfolioStore = inject(PortfolioStore);
   private readonly recurringStore = inject(RecurringStore);
@@ -107,13 +107,18 @@ export class App {
     this.routeAnimToggle.update((v) => !v);
   }
 
-  protected readonly links = [
-    { path: '/movimenti', label: 'Movimenti', icon: 'lucideList' },
-    { path: '/dashboard', label: 'Grafici', icon: 'lucideChartPie' },
-    { path: '/patrimonio', label: 'Patrimonio', icon: 'lucideWallet' },
-    { path: '/ricorrenti', label: 'Ricorrenti', icon: 'lucideRepeat' },
-    { path: '/profilo', label: 'Profilo', icon: 'lucideUser' },
-  ];
+  /** L'utente amministratore delle categorie vede solo "Profilo" (contiene "Categorie" e il logout). */
+  protected readonly links = computed(() =>
+    this.categoryStore.isAdmin()
+      ? [{ path: '/profilo', label: 'Profilo', icon: 'lucideUser' }]
+      : [
+          { path: '/movimenti', label: 'Movimenti', icon: 'lucideList' },
+          { path: '/dashboard', label: 'Grafici', icon: 'lucideChartPie' },
+          { path: '/patrimonio', label: 'Patrimonio', icon: 'lucideWallet' },
+          { path: '/ricorrenti', label: 'Ricorrenti', icon: 'lucideRepeat' },
+          { path: '/profilo', label: 'Profilo', icon: 'lucideUser' },
+        ],
+  );
 
   openQuickAdd(): void {
     this.quickAdd().open();
@@ -121,7 +126,7 @@ export class App {
 
   @HostListener('window:keydown', ['$event'])
   onKeydown(ev: KeyboardEvent): void {
-    if (!this.auth.user()) return;
+    if (!this.auth.user() || this.categoryStore.isAdmin()) return;
     const target = ev.target as HTMLElement | null;
     const typing = target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
     if (!typing && (ev.key === 'n' || ev.key === 'N') && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {

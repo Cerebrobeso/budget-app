@@ -1,7 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+  viewChildren,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePencil, lucidePlus, lucideTrash2, lucideX } from '@ng-icons/lucide';
+import { lucideGripVertical, lucidePencil, lucidePlus, lucideTrash2, lucideX } from '@ng-icons/lucide';
 import { Category, Subcategory } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { ColorPickerComponent } from './color-picker';
@@ -30,13 +41,15 @@ import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
     ...HlmSelectImports,
     ...HlmTooltipImports,
   ],
-  providers: [provideIcons({ lucidePencil, lucidePlus, lucideTrash2, lucideX })],
+  providers: [provideIcons({ lucideGripVertical, lucidePencil, lucidePlus, lucideTrash2, lucideX })],
   templateUrl: './categories-page.html',
   styleUrl: './categories-page.css',
 })
 export class CategoriesPage {
   protected readonly store = inject(CategoryStore);
   private readonly txStore = inject(TransactionStore);
+  private readonly injector = inject(Injector);
+  private readonly cardEls = viewChildren<ElementRef<HTMLElement>>('catCard');
 
   readonly newName = signal('');
   readonly newColor = signal('#2e46d1');
@@ -46,6 +59,8 @@ export class CategoriesPage {
   readonly editingSub = signal<string | null>(null);
   readonly editName = signal('');
   readonly deletingCat = signal<Category | null>(null);
+  readonly draggingId = signal<string | null>(null);
+  readonly dragOverId = signal<string | null>(null);
   /** Cosa fare dei movimenti già registrati con la categoria che si sta eliminando. */
   readonly reassignMode = signal<'fallback' | 'pick'>('fallback');
   readonly reassignTarget = signal<string>('');
@@ -151,5 +166,78 @@ export class CategoriesPage {
     const name = this.editName().trim();
     if (name) this.store.renameSubcategory(cat.id, sub.id, name);
     this.editingSub.set(null);
+  }
+
+  canReorder(cat: Category): boolean {
+    return !cat.shared || this.store.isAdmin();
+  }
+
+  onDragStart(cat: Category, event: DragEvent): void {
+    this.draggingId.set(cat.id);
+    event.dataTransfer?.setData('text/plain', cat.id);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  }
+
+  onDragOver(cat: Category, event: DragEvent): void {
+    if (!this.draggingId()) return;
+    event.preventDefault();
+    this.dragOverId.set(cat.id);
+  }
+
+  onDrop(target: Category, event: DragEvent): void {
+    event.preventDefault();
+    const draggedId = this.draggingId();
+    this.draggingId.set(null);
+    this.dragOverId.set(null);
+    if (!draggedId || draggedId === target.id) return;
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const position = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+    const before = this.captureRects();
+    this.store.moveCategory(draggedId, target.id, position);
+    this.playFlip(before);
+  }
+
+  onDragEnd(): void {
+    this.draggingId.set(null);
+    this.dragOverId.set(null);
+  }
+
+  private captureRects(): Map<string, DOMRect> {
+    const rects = new Map<string, DOMRect>();
+    for (const ref of this.cardEls()) {
+      const el = ref.nativeElement;
+      const id = el.dataset['catId'];
+      if (id) rects.set(id, el.getBoundingClientRect());
+    }
+    return rects;
+  }
+
+  /**
+   * Animazione FLIP: dopo il riordino, ogni card riparte visivamente dalla sua vecchia
+   * posizione (via transform) e scivola in quella nuova, invece di scattare di colpo.
+   */
+  private playFlip(before: Map<string, DOMRect>): void {
+    afterNextRender(
+      () => {
+        for (const ref of this.cardEls()) {
+          const el = ref.nativeElement;
+          const id = el.dataset['catId'];
+          const prev = id ? before.get(id) : undefined;
+          if (!prev) continue;
+          const next = el.getBoundingClientRect();
+          const dy = prev.top - next.top;
+          if (Math.abs(dy) < 1) continue;
+          el.style.transition = 'none';
+          el.style.transform = `translateY(${dy}px)`;
+          el.getBoundingClientRect(); // forza il reflow prima di riattivare la transition
+          el.style.transition = 'transform 200ms ease';
+          el.style.transform = '';
+          el.addEventListener('transitionend', () => {
+            el.style.transition = '';
+          }, { once: true });
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }

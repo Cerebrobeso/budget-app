@@ -104,6 +104,7 @@ function catToRow(cat: Category) {
     color: cat.color,
     archived: cat.archived ?? false,
     subcategories: cat.subcategories,
+    sort_order: cat.sortOrder ?? null,
   };
 }
 function rowToCat(row: any): Category {
@@ -115,6 +116,7 @@ function rowToCat(row: any): Category {
     archived: row.archived ?? undefined,
     subcategories: row.subcategories ?? [],
     shared: row.is_shared ?? false,
+    sortOrder: row.sort_order ?? undefined,
   };
 }
 function catPatchToRow(patch: Partial<Omit<Category, 'id'>>): Record<string, unknown> {
@@ -124,6 +126,8 @@ function catPatchToRow(patch: Partial<Omit<Category, 'id'>>): Record<string, unk
   if (patch.color !== undefined) row['color'] = patch.color;
   if (patch.archived !== undefined) row['archived'] = patch.archived;
   if (patch.subcategories !== undefined) row['subcategories'] = patch.subcategories;
+  if (patch.shared !== undefined) row['is_shared'] = patch.shared;
+  if (patch.sortOrder !== undefined) row['sort_order'] = patch.sortOrder;
   return row;
 }
 

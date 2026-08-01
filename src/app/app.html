@@ -10,13 +10,13 @@
   }
   <div class="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-4 pb-24 md:pb-8">
     <header class="flex items-center justify-between py-4">
-      <a routerLink="/movimenti" class="flex items-baseline gap-1.5 font-display text-2xl font-extrabold tracking-tight">
+      <a [routerLink]="categoryStore.isAdmin() ? '/profilo' : '/movimenti'" class="flex items-baseline gap-1.5 font-display text-2xl font-extrabold tracking-tight">
         Registro<span class="text-primary">.</span>
         <span class="text-sm font-medium tracking-normal text-muted-foreground">v{{ appVersion }}</span>
       </a>
       <div class="flex items-center gap-2">
         <nav class="hidden md:flex items-center gap-1 mr-2" aria-label="Sezioni">
-          @for (link of links; track link.path) {
+          @for (link of links(); track link.path) {
             <a
               [routerLink]="link.path"
               routerLinkActive="!bg-foreground !text-background"
@@ -24,9 +24,11 @@
             >{{ link.label }}</a>
           }
         </nav>
-        <button hlmBtn class="hidden md:inline-flex font-semibold" (click)="openQuickAdd()">
-          <ng-icon name="lucidePlus" class="mr-1" /> Nuovo <kbd class="figure ml-1 rounded bg-black/15 px-1.5 text-sm">N</kbd>
-        </button>
+        @if (!categoryStore.isAdmin()) {
+          <button hlmBtn class="hidden md:inline-flex font-semibold" (click)="openQuickAdd()">
+            <ng-icon name="lucidePlus" class="mr-1" /> Nuovo <kbd class="figure ml-1 rounded bg-black/15 px-1.5 text-sm">N</kbd>
+          </button>
+        }
       </div>
     </header>
 
@@ -49,7 +51,7 @@
            pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:hidden"
     aria-label="Sezioni"
   >
-    @for (link of links; track link.path) {
+    @for (link of links(); track link.path) {
       <a
         [routerLink]="link.path"
         routerLinkActive="!text-primary font-bold"
@@ -62,13 +64,15 @@
   </nav>
 
   <!-- FAB mobile -->
-  <button
-    hlmBtn
-    size="icon"
-    class="fixed bottom-20 right-4 z-40 shadow-xl shadow-primary/30 md:hidden"
-    aria-label="Aggiungi movimento"
-    (click)="openQuickAdd()"
-  ><ng-icon name="lucidePlus" /></button>
+  @if (!categoryStore.isAdmin()) {
+    <button
+      hlmBtn
+      size="icon"
+      class="fixed bottom-20 right-4 z-40 shadow-xl shadow-primary/30 md:hidden"
+      aria-label="Aggiungi movimento"
+      (click)="openQuickAdd()"
+    ><ng-icon name="lucidePlus" /></button>
+  }
 
   <!-- Dialog inserimento rapido, disponibile ovunque -->
   <hlm-dialog #quickAdd="hlmDialog" closeDelay="100">

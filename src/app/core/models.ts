@@ -8,6 +8,9 @@ export type TransactionType = 'income' | 'expense' | 'transfer';
  */
 export const TRANSFER_CATEGORY_ID = '__transfer__';
 
+/** Unico utente che può modificare/creare qualsiasi categoria e renderla predefinita (is_shared). */
+export const CATEGORY_ADMIN_UID = '25c9068d-4a86-44c2-b014-a56ffea09554';
+
 /**
  * Etichetta opzionale per un movimento fuori dall'ordinario: 'unexpected' (imprevisto, non
  * pianificato) o 'planned' (spesa/entrata grossa ma prevista in anticipo, es. vacanza). Le due
@@ -89,6 +92,13 @@ export interface Category {
   color: string;
   archived?: boolean;
   subcategories: Subcategory[];
+  /**
+   * Posizione nell'elenco (crescente). Le predefinite partono distanziate di 100 (100, 200, 300...)
+   * apposta per lasciare spazio a chi vuole trascinare le proprie categorie in mezzo a quelle
+   * predefinite. Assente sulle righe create prima di questo campo: in quel caso l'ordine ricade
+   * sulla posizione originale (vedi CategoryStore).
+   */
+  sortOrder?: number;
   /**
    * Categoria di default, condivisa in lettura con tutti gli utenti (RLS lato db).
    * Sola lettura lato app: rinominarla/archiviarla/ricolorarla va fatto a mano nel

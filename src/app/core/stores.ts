@@ -6,6 +6,7 @@ import { dateToIso, isoToDate } from './format';
 import {
   Asset,
   AssetSnapshot,
+  CATEGORY_ADMIN_UID,
   Category,
   RecurringRule,
   Subcategory,
@@ -33,9 +34,26 @@ export class CategoryStore {
   readonly subcategoryOverlays = signal<SubcategoryOverlay[]>([]);
   readonly ready = signal(false);
 
-  readonly active = computed(() => this.categories().filter((c) => !c.archived));
+  /** Passo usato per distanziare l'ordine: le predefinite in db partono già a 100, 200, 300... */
+  private readonly ORDER_GAP = 100;
+
+  /**
+   * Categoria + posizione effettiva: sortOrder se presente, altrimenti la posizione originale
+   * (moltiplicata per il passo) così le categorie senza sortOrder ancora assegnato (create prima
+   * di questo campo) mantengono l'ordine con cui sono arrivate dal repository.
+   */
+  private orderedActive(): { cat: Category; order: number }[] {
+    return this.categories()
+      .filter((c) => !c.archived)
+      .map((cat, i) => ({ cat, order: cat.sortOrder ?? i * this.ORDER_GAP }))
+      .sort((a, b) => a.order - b.order);
+  }
+
+  readonly active = computed(() => this.orderedActive().map((x) => x.cat));
   readonly expenseCategories = computed(() => this.active().filter((c) => c.kind === 'expense'));
   readonly incomeCategories = computed(() => this.active().filter((c) => c.kind === 'income'));
+  /** Può modificare/creare qualsiasi categoria (anche condivise) e renderla predefinita. */
+  readonly isAdmin = computed(() => this.auth.user()?.id === CATEGORY_ADMIN_UID);
 
   constructor() {
     effect(() => {
@@ -119,10 +137,27 @@ export class CategoryStore {
     this.patch(id, () => ({ archived }));
   }
 
+  setShared(id: string, shared: boolean): void {
+    this.patch(id, () => ({ shared }));
+  }
+
+  /** Sposta `draggedId` appena prima/dopo `targetId` nell'elenco, ricalcolando solo il suo sortOrder. */
+  moveCategory(draggedId: string, targetId: string, position: 'before' | 'after'): void {
+    if (draggedId === targetId) return;
+    const rest = this.orderedActive().filter((x) => x.cat.id !== draggedId);
+    const targetIdx = rest.findIndex((x) => x.cat.id === targetId);
+    if (targetIdx === -1) return;
+    const insertAt = position === 'before' ? targetIdx : targetIdx + 1;
+    const prevOrder = insertAt > 0 ? rest[insertAt - 1].order : rest[0].order - this.ORDER_GAP * 2;
+    const nextOrder =
+      insertAt < rest.length ? rest[insertAt].order : rest[rest.length - 1].order + this.ORDER_GAP * 2;
+    this.patch(draggedId, () => ({ sortOrder: (prevOrder + nextOrder) / 2 }));
+  }
+
   addSubcategory(categoryId: string, name: string): void {
     const cat = this.byId(categoryId);
     if (!cat) return;
-    if (cat.shared) {
+    if (cat.shared && !this.isAdmin()) {
       const overlay: SubcategoryOverlay = { id: uid(), categoryId, name };
       this.subcategoryOverlays.update((list) => [...list, overlay]);
       this.repo.addSubcategoryOverlay(overlay).catch((err) =>
