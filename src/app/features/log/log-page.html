@@ -1,10 +1,22 @@
 <!-- Timbro del mese: il saldo come split di gara -->
 <section hlmCard class="mt-6 mb-4 overflow-hidden" style="--card-spacing: 0;">
+	<div class="flex items-center justify-center w-full">
+	<div class="flex flex-wrap items-center gap-2 md:flex-row min-h-7 mt-3">
+		@if (!isToday()) {
+			<button size="sm" hlmBtn variant="secondary" (click)="resetYearAndMonth()">
+				<ng-icon name="lucideRotateCcw" />
+				Torna ad oggi
+			</button>
+		}
+	</div>
+	</div>
   <div class="flex items-center justify-between border-b border-border px-4 py-3">
     <button hlmBtn variant="ghost" size="icon" aria-label="Mese precedente" hlmTooltip="Mese precedente" (click)="shiftMonth(-1)">
       <ng-icon name="lucideChevronLeft" />
     </button>
     <div class="text-center">
+
+
       <div class="font-display text-3xl font-extrabold tracking-tight leading-none">
         {{ monthStamp() }}
       </div>
@@ -122,7 +134,7 @@
 
 <hr class="my-4">
 <!-- Lista movimenti raggruppata per giorno -->
-@if (groups().length === 0) {
+@if (groups().length === 0 && !txQuery.isLoading()) {
   <div hlmCard class="p-8 text-center text-muted-foreground">
     <p>
       Nessun movimento in questo mese.<br />

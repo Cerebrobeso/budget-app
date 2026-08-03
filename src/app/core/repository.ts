@@ -2,6 +2,21 @@ import { InjectionToken } from '@angular/core';
 import { Asset, Category, RecurringRule, SubcategoryOverlay, Transaction } from './models';
 
 /**
+ * Filtri dei movimenti risolti dal backend. L'intervallo è semiaperto (`before` escluso)
+ * perché `date` è un date Postgres: una fine mese fissa tipo `2026-02-31` non sarebbe castabile.
+ */
+export interface TransactionQuery {
+  /** ISO yyyy-MM-dd, incluso. */
+  from?: string;
+  /** ISO yyyy-MM-dd, escluso. */
+  before?: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  /** Sottostringa case-insensitive sulla descrizione. */
+  search?: string;
+}
+
+/**
  * Contratto di persistenza. Le scritture sono granulari (add/update/remove)
  * per evitare di riscrivere l'intero array a ogni cambiamento — importante
  * per un backend remoto come Supabase, dove significherebbe un upsert
@@ -9,6 +24,8 @@ import { Asset, Category, RecurringRule, SubcategoryOverlay, Transaction } from 
  */
 export interface BudgetRepository {
   loadTransactions(): Promise<Transaction[] | null>;
+  /** Movimenti filtrati e ordinati (data desc) dal backend; `signal` annulla la richiesta se i filtri cambiano. */
+  queryTransactions(query: TransactionQuery, signal?: AbortSignal): Promise<Transaction[] | null>;
   addTransaction(tx: Transaction): Promise<void>;
   updateTransaction(id: string, patch: Partial<Omit<Transaction, 'id'>>): Promise<void>;
   removeTransaction(id: string): Promise<void>;
@@ -59,6 +76,19 @@ export class LocalStorageBudgetRepository implements BudgetRepository {
 
   async loadTransactions(): Promise<Transaction[] | null> {
     return this.read<Transaction[]>(KEYS.transactions) ?? [];
+  }
+  async queryTransactions(query: TransactionQuery): Promise<Transaction[] | null> {
+    const term = query.search?.toLowerCase();
+    return (this.read<Transaction[]>(KEYS.transactions) ?? [])
+      .filter(
+        (t) =>
+          (!query.from || t.date >= query.from) &&
+          (!query.before || t.date < query.before) &&
+          (!query.categoryId || t.categoryId === query.categoryId) &&
+          (!query.subcategoryId || t.subcategoryId === query.subcategoryId) &&
+          (!term || t.description.toLowerCase().includes(term)),
+      )
+      .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
   }
   async addTransaction(tx: Transaction): Promise<void> {
     const items = this.read<Transaction[]>(KEYS.transactions) ?? [];

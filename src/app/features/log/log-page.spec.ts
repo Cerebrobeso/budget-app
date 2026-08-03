@@ -1,8 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { formatDayLabel } from '../../core/format';
 import { Category, Transaction, TRANSACTION_TAG_LABEL, TRANSFER_CATEGORY_ID } from '../../core/models';
+import { TransactionQuery } from '../../core/repository';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { LogPage } from './log-page';
 
@@ -32,15 +34,30 @@ function makeCategory(overrides: Partial<Category> = {}): Category {
   };
 }
 
-/** Fake TransactionStore: solo i membri che LogPage legge/chiama, con lo stesso comportamento reale di sorted/byMonth. */
+/** Fake TransactionStore: solo i membri che LogPage legge/chiama. `queryTransactions` applica gli
+ *  stessi predicati di TransactionQuery del repository reale, ordinamento incluso (data desc, id asc). */
 function createFakeTransactionStore(transactions: Transaction[]) {
   const transactionsSignal = signal<Transaction[]>(transactions);
-  const sorted = vi.fn(() => [...transactionsSignal()].sort((a, b) => b.date.localeCompare(a.date)));
-  const byMonth = vi.fn((year: number, month: number) => {
-    const prefix = `${year}-${String(month).padStart(2, '0')}`;
-    return sorted().filter((t) => t.date.startsWith(prefix));
+  const queryTransactions = vi.fn(async (query: TransactionQuery) => {
+    const term = query.search?.toLowerCase();
+    return transactionsSignal()
+      .filter(
+        (t) =>
+          (!query.from || t.date >= query.from) &&
+          (!query.before || t.date < query.before) &&
+          (!query.categoryId || t.categoryId === query.categoryId) &&
+          (!query.subcategoryId || t.subcategoryId === query.subcategoryId) &&
+          (!term || t.description.toLowerCase().includes(term)),
+      )
+      .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
   });
-  return { transactions: transactionsSignal, sorted, byMonth, update: vi.fn(), remove: vi.fn() };
+  return {
+    transactions: transactionsSignal,
+    revision: signal(0),
+    queryTransactions,
+    update: vi.fn(),
+    remove: vi.fn(),
+  };
 }
 
 /** Fake CategoryStore: solo categories/activeSubs/byId/subName, come usati da LogPage. */
@@ -58,12 +75,30 @@ function createPage(transactions: Transaction[], categories: Category[]) {
   TestBed.configureTestingModule({
     providers: [
       LogPage,
+      provideRouter([]),
       { provide: TransactionStore, useValue: txStore },
       { provide: CategoryStore, useValue: catStore },
     ],
   });
   const page = TestBed.inject(LogPage);
   return { page, txStore, catStore };
+}
+
+/** La lista viene dal backend: resource() e toObservable() girano su effect (app zoneless, pagina non
+ *  montata in un fixture) e il loader risolve su microtask, quindi va drenato a mano. */
+async function settle(): Promise<void> {
+  for (let i = 0; i < 3; i++) {
+    TestBed.flushEffects();
+    await Promise.resolve();
+  }
+}
+
+/** La ricerca è debounced di 250ms prima di diventare una chiamata: qui si aspetta davvero. */
+async function setSearch(page: LogPage, term: string): Promise<void> {
+  page.search.set(term);
+  TestBed.flushEffects();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  await settle();
 }
 
 /** editDialog/deleteDialog sono viewChild.required: si risolvono solo dopo un detectChanges reale.
@@ -139,84 +174,154 @@ describe('LogPage', () => {
     // Maggio 2026: usata solo per provare che la ricerca guarda anche fuori dal mese aperto.
     const tx3 = makeTx({ id: 'tx3', date: '2026-05-20', type: 'expense', amount: 15, categoryId: 'cat-food', subcategoryId: 'sub-spesa', description: 'Pizza surgelata supermercato', tag: 'unexpected' });
 
-    function setupJune() {
+    async function setupJune() {
       const ctx = createPage([tx1, tx2, tx3, tx4, tx5], categories);
       ctx.page.year.set(2026);
       ctx.page.month.set(6);
+      await settle();
       return ctx;
     }
 
-    describe('filtered', () => {
-      it('with no search text, uses txStore.byMonth for the current month only', () => {
-        const { page, txStore } = setupJune();
+    describe('query passata al backend', () => {
+      it('with no search text, asks for the open month as a half-open range', async () => {
+        const { txStore } = await setupJune();
 
-        const ids = page.filtered().map((t) => t.id);
-
-        expect(ids).toEqual(txStore.byMonth(2026, 6).map((t) => t.id));
-        expect(ids).toEqual(['tx4', 'tx2', 'tx1', 'tx5']);
+        expect(txStore.queryTransactions).toHaveBeenLastCalledWith(
+          { from: '2026-06-01', before: '2026-07-01', categoryId: undefined, subcategoryId: undefined, search: undefined },
+          expect.anything(),
+        );
       });
 
-      it('with search text set, searches txStore.sorted() across ALL months, case-insensitively', () => {
-        const { page } = setupJune();
+      it('rolls the December window over to January of the next year', async () => {
+        const { page, txStore } = await setupJune();
+        page.month.set(12);
+        await settle();
+
+        expect(txStore.queryTransactions).toHaveBeenLastCalledWith(
+          expect.objectContaining({ from: '2026-12-01', before: '2027-01-01' }),
+          expect.anything(),
+        );
+      });
+
+      it('with search text set, drops the month window so the backend looks across all months', async () => {
+        const { page, txStore } = await setupJune();
+
+        await setSearch(page, 'PiZzA');
+
+        // Match esatto: prova che `from`/`before` sono assenti, non solo undefined.
+        expect(txStore.queryTransactions).toHaveBeenLastCalledWith(
+          { categoryId: undefined, subcategoryId: undefined, search: 'PiZzA' },
+          expect.anything(),
+        );
+      });
+
+      it('sends no categoryId for __all__, and ignores the sub-filter while the category is __all__', async () => {
+        const { page, txStore } = await setupJune();
+        page.filterSub.set('sub-resto');
+        await settle();
+
+        expect(txStore.queryTransactions).toHaveBeenLastCalledWith(
+          expect.objectContaining({ categoryId: undefined, subcategoryId: undefined }),
+          expect.anything(),
+        );
+      });
+    });
+
+    describe('filtered', () => {
+      it('with no search text, holds the open month only', async () => {
+        const { page } = await setupJune();
+
+        expect(page.filtered().map((t) => t.id)).toEqual(['tx4', 'tx2', 'tx1', 'tx5']);
+      });
+
+      it('with search text set, matches across ALL months, case-insensitively', async () => {
+        const { page } = await setupJune();
         // Mese aperto volutamente diverso da quello dei movimenti che matchano, per provare
         // che la ricerca non si limita al mese corrente.
-        page.year.set(2026);
         page.month.set(1);
-        page.search.set('PiZzA');
+        await settle();
 
-        const ids = page.filtered().map((t) => t.id);
+        await setSearch(page, 'PiZzA');
 
-        expect(ids).toEqual(['tx1', 'tx3']);
+        expect(page.filtered().map((t) => t.id)).toEqual(['tx1', 'tx3']);
       });
 
-      it('narrows by categoryId when a category filter is active', () => {
-        const { page } = setupJune();
+      it('narrows by categoryId when a category filter is active', async () => {
+        const { page } = await setupJune();
         page.filterCategory.set('cat-food');
+        await settle();
 
-        const ids = page.filtered().map((t) => t.id);
-
-        expect(ids.sort()).toEqual(['tx1', 'tx5']);
+        expect(page.filtered().map((t) => t.id).sort()).toEqual(['tx1', 'tx5']);
       });
 
-      it('narrows further by subcategoryId when a sub-filter is also active', () => {
-        const { page } = setupJune();
+      it('narrows further by subcategoryId when a sub-filter is also active', async () => {
+        const { page } = await setupJune();
         page.filterCategory.set('cat-food');
         page.filterSub.set('sub-resto');
+        await settle();
 
-        const ids = page.filtered().map((t) => t.id);
+        expect(page.filtered().map((t) => t.id)).toEqual(['tx1']);
+      });
 
-        expect(ids).toEqual(['tx1']);
+      it('keeps the previous result while the next query is in flight', async () => {
+        const { page } = await setupJune();
+        const before = page.filtered().map((t) => t.id);
+
+        // Cambio mese senza drenare: la query è ancora in volo.
+        page.month.set(7);
+        TestBed.flushEffects();
+
+        expect(page.filtered().map((t) => t.id)).toEqual(before);
       });
     });
 
     describe('displayedItems', () => {
-      it('narrows filtered() by filterTag when set', () => {
-        const { page } = setupJune();
+      it('narrows filtered() by filterTag when set', async () => {
+        const { page } = await setupJune();
         page.filterTag.set('planned');
 
         expect(page.displayedItems().map((t) => t.id)).toEqual(['tx5']);
       });
 
-      it('is unchanged from filtered() when filterTag is null', () => {
-        const { page } = setupJune();
+      it('is unchanged from filtered() when filterTag is null', async () => {
+        const { page } = await setupJune();
 
         expect(page.displayedItems().map((t) => t.id)).toEqual(page.filtered().map((t) => t.id));
+      });
+
+      it('does not re-query the backend: the tag filter stays client-side', async () => {
+        const { page, txStore } = await setupJune();
+        const callsBefore = txStore.queryTransactions.mock.calls.length;
+
+        page.filterTag.set('planned');
+        await settle();
+
+        expect(txStore.queryTransactions.mock.calls.length).toBe(callsBefore);
       });
     });
 
     describe('totIncome / totExpense / balance', () => {
-      it('sums income and expense from filtered(), excluding transfers, and computes the balance', () => {
-        const { page } = setupJune();
+      it('sums income and expense from filtered(), excluding transfers, and computes the balance', async () => {
+        const { page } = await setupJune();
 
         expect(page.totIncome()).toBe(2000);
         expect(page.totExpense()).toBe(30);
         expect(page.balance()).toBe(1970);
       });
+
+      it('ignores the tag filter, so the month totals do not change when it is active', async () => {
+        const { page } = await setupJune();
+        page.filterTag.set('planned');
+        await settle();
+
+        expect(page.totIncome()).toBe(2000);
+        expect(page.totExpense()).toBe(30);
+      });
     });
 
     describe('groups', () => {
-      it('groups displayedItems() by date, sorted descending, with label from formatDayLabel', () => {
-        const { page } = setupJune();
+      it('groups displayedItems() by date, most recent first, with label from formatDayLabel', async () => {
+        const { page } = await setupJune();
 
         const groups = page.groups();
 
@@ -225,6 +330,18 @@ describe('LogPage', () => {
         for (const g of groups) {
           expect(g.label).toBe(formatDayLabel(g.date));
         }
+      });
+    });
+
+    describe('revision', () => {
+      it('re-queries the backend once a write has settled', async () => {
+        const { txStore } = await setupJune();
+        const callsBefore = txStore.queryTransactions.mock.calls.length;
+
+        txStore.revision.update((n) => n + 1);
+        await settle();
+
+        expect(txStore.queryTransactions.mock.calls.length).toBe(callsBefore + 1);
       });
     });
   });
@@ -420,6 +537,7 @@ describe('LogPage', () => {
       );
       page.year.set(2026);
       page.month.set(6);
+      await settle();
 
       page.exportCsv();
 
@@ -443,6 +561,7 @@ describe('LogPage', () => {
       const { page } = createPage([], []);
       page.year.set(2026);
       page.month.set(6);
+      await settle();
 
       page.exportCsv();
 

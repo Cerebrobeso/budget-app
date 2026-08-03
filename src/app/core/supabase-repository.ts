@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Asset, Category, RecurringRule, SubcategoryOverlay, Transaction, TransactionTag } from './models';
-import { BudgetRepository } from './repository';
+import { BudgetRepository, TransactionQuery } from './repository';
 import { supabase } from './supabase.client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -10,6 +10,13 @@ import { supabase } from './supabase.client';
 async function checkWrite(result: PromiseLike<{ error: { message: string } | null }>): Promise<void> {
   const { error } = await result;
   if (error) throw new Error(error.message);
+}
+
+/** `%` e `_` in un testo cercato sono wildcard per ilike: vanno neutralizzati.
+ * ponytail: `*` resta un wildcard (PostgREST lo traduce in `%` prima di Postgres e non ha un escape);
+ * cercare un `*` letterale ritorna più righe del previsto. Da affrontare solo se serve davvero. */
+function escapeLike(term: string): string {
+  return term.replace(/[%_\\]/g, (c) => `\\${c}`);
 }
 
 function txToRow(tx: Transaction) {
@@ -192,6 +199,20 @@ function assetPatchToRow(patch: Partial<Omit<Asset, 'id'>>): Record<string, unkn
 export class SupabaseBudgetRepository implements BudgetRepository {
   async loadTransactions(): Promise<Transaction[] | null> {
     const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: true });
+    if (error || !data) return null;
+    return data.map(rowToTx);
+  }
+  async queryTransactions(query: TransactionQuery, signal?: AbortSignal): Promise<Transaction[] | null> {
+    let request = supabase.from('transactions').select('*');
+    if (query.from) request = request.gte('date', query.from);
+    if (query.before) request = request.lt('date', query.before);
+    if (query.categoryId) request = request.eq('category_id', query.categoryId);
+    if (query.subcategoryId) request = request.eq('subcategory_id', query.subcategoryId);
+    if (query.search) request = request.ilike('description', `%${escapeLike(query.search)}%`);
+    // Tiebreaker su id: senza, l'ordine dei movimenti dello stesso giorno non è deterministico.
+    let ordered = request.order('date', { ascending: false }).order('id', { ascending: true });
+    if (signal) ordered = ordered.abortSignal(signal);
+    const { data, error } = await ordered;
     if (error || !data) return null;
     return data.map(rowToTx);
   }

@@ -61,6 +61,9 @@ class FakeBudgetRepository implements BudgetRepository {
   async loadTransactions(): Promise<Transaction[] | null> {
     return [];
   }
+  async queryTransactions(): Promise<Transaction[] | null> {
+    return [];
+  }
   async addTransaction(tx: Transaction): Promise<void> {
     if (this.failAddTransactionWhen?.(tx)) throw new Error('boom');
   }

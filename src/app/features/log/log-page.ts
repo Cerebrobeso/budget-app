@@ -1,11 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, resource, signal, viewChild } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import { debounceTime, map } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideUpload, lucideX } from '@ng-icons/lucide';
+import { lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil,
+  lucideRotateCcw, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideUpload, lucideX } from '@ng-icons/lucide';
 import { Transaction, TransactionTag, TRANSACTION_TAG_LABEL, TRANSFER_CATEGORY_ID, todayIso } from '../../core/models';
+import { TransactionQuery } from '../../core/repository';
 import { CategoryStore, TransactionStore } from '../../core/stores';
-import { eur, eurSigned, formatDayLabel, monthLongLabel, monthShortLabel } from '../../core/format';
+import { dateToIso, eur, eurSigned, formatDayLabel, monthLongLabel, monthShortLabel } from '../../core/format';
 import { downloadFile, toCsv } from '../../core/export';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmButtonGroupImports } from '@spartan-ng/helm/button-group';
@@ -22,6 +26,11 @@ interface DayGroup {
   date: string;
   label: string;
   items: Transaction[];
+}
+
+/** Finestra semiaperta del mese (month è 1-based): `new Date(y, month, 1)` è già il primo del mese dopo, rollover di dicembre incluso. */
+function monthWindow(year: number, month: number): { from: string; before: string } {
+  return { from: dateToIso(new Date(year, month - 1, 1)), before: dateToIso(new Date(year, month, 1)) };
 }
 
 @Component({
@@ -43,7 +52,7 @@ interface DayGroup {
     DatePipe
   ],
   providers: [
-    provideIcons({ lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideX, lucideUpload }),
+    provideIcons({ lucideCalendarDays, lucideChevronLeft, lucideChevronRight, lucideDownload, lucidePencil, lucideSearch, lucideTag, lucideTrash2, lucideTriangleAlert, lucideX, lucideUpload, lucideRotateCcw }),
   ],
   templateUrl: './log-page.html',
   styleUrl: './log-page.css',
@@ -51,6 +60,8 @@ interface DayGroup {
 export class LogPage {
   protected readonly txStore = inject(TransactionStore);
   protected readonly catStore = inject(CategoryStore);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   private readonly now = new Date();
   readonly year = signal(this.now.getFullYear());
@@ -69,6 +80,7 @@ export class LogPage {
 
   readonly monthStamp = computed(() => monthShortLabel(this.month()));
   readonly monthLong = computed(() => monthLongLabel(this.month()));
+  readonly isToday = computed(() => (this.month() === this.now.getMonth() + 1) && this.year() === this.now.getFullYear());
 
   readonly filterSubs = computed(() => {
     this.catStore.categories();
@@ -81,18 +93,38 @@ export class LogPage {
 
   readonly anyFilterActive = computed(() => this.filterCategory() !== '__all__' || this.filterTag() !== null);
 
-  /** Ricerca + filtro categoria/sottocategoria: guida il saldo del mese, indipendentemente dal filtro per etichetta. */
-  readonly filtered = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    let items = term ? this.txStore.sorted() : this.txStore.byMonth(this.year(), this.month());
-    if (term) items = items.filter((t) => t.description.toLowerCase().includes(term));
+  /** La ricerca ora è una chiamata di rete, non un filter(): non può partire a ogni tasto premuto. */
+  private readonly searchTerm = toSignal(
+    toObservable(this.search).pipe(
+      debounceTime(250),
+      map((s) => s.trim()),
+    ),
+    { initialValue: '' },
+  );
+
+  /** Filtri e ordinamento risolti dal backend; l'etichetta resta fuori (vedi `displayedItems`). */
+  private readonly query = computed<TransactionQuery>(() => {
+    const term = this.searchTerm();
     const cat = this.filterCategory();
-    if (cat !== '__all__') {
-      items = items.filter((t) => t.categoryId === cat);
-      const sub = this.filterSub();
-      if (sub !== '__all__') items = items.filter((t) => t.subcategoryId === sub);
-    }
-    return items;
+    const sub = this.filterSub();
+    return {
+      ...(term ? {} : monthWindow(this.year(), this.month())),
+      categoryId: cat === '__all__' ? undefined : cat,
+      subcategoryId: cat === '__all__' || sub === '__all__' ? undefined : sub,
+      search: term || undefined,
+    };
+  });
+
+  /** `revision` nei params: dopo una scrittura ottimistica si rilegge solo quando il write si è concluso. */
+  protected readonly txQuery = resource({
+    params: () => ({ query: this.query(), revision: this.txStore.revision() }),
+    loader: ({ params, abortSignal }) => this.txStore.queryTransactions(params.query, abortSignal),
+  });
+
+  /** Trattiene l'ultimo risultato mentre la query dopo è in volo: cambiare mese non deve svuotare lista e totali. */
+  readonly filtered = linkedSignal<Transaction[] | null | undefined, Transaction[]>({
+    source: () => this.txQuery.value(),
+    computation: (value, previous) => value ?? previous?.value ?? [],
   });
 
   /** Movimenti effettivamente mostrati in lista/export: `filtered` più il filtro per etichetta, se attivo. */
@@ -117,10 +149,35 @@ export class LogPage {
       list.push(tx);
       map.set(tx.date, list);
     }
-    return [...map.entries()]
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([date, items]) => ({ date, label: formatDayLabel(date), items }));
+    // Nessun sort: i movimenti arrivano già in data decrescente dal backend, quindi
+    // l'ordine di inserimento nella Map dà già i giorni dal più recente.
+    return [...map.entries()].map(([date, items]) => ({ date, label: formatDayLabel(date), items }));
   });
+
+  private syncQueryParams(year: number, month: number | null): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {year, month},
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  constructor() {
+    const params = this.route.snapshot.queryParamMap;
+    const year = Number(params.get('year'));
+    const month = Number(params.get('month'));
+
+    if (year > 0) {
+      this.year.set(year);
+    }
+    if (month > 0 && month <= 12) {
+      this.month.set(month);
+    } else {
+      this.month.set(this.now.getMonth() + 1)
+    }
+    this.syncQueryParams(this.year(), this.month());
+  }
 
   shiftMonth(delta: number): void {
     let m = this.month() + delta;
@@ -129,6 +186,7 @@ export class LogPage {
     if (m > 12) { m = 1; y++; }
     this.month.set(m);
     this.year.set(y);
+    this.syncQueryParams(this.year(), this.month());
   }
 
   onFilterCategory(value: unknown): void {
@@ -186,6 +244,12 @@ export class LogPage {
     this.deleting.set(null);
   }
 
+  resetYearAndMonth() {
+    this.year.set(this.now.getFullYear());
+    this.month.set(this.now.getMonth() +1);
+    this.syncQueryParams(this.year(), this.month());
+  }
+
   protected readonly fmt = eur;
   protected readonly fmtSigned = eurSigned;
 
@@ -199,7 +263,7 @@ export class LogPage {
       t.subcategoryId ? (this.catStore.subName(t.categoryId, t.subcategoryId) ?? '') : '',
       t.description,
       t.amount.toFixed(2).replace('.', ','),
-      t.tag ? TRANSACTION_TAG_LABEL[t.tag] : '',
+      t.tag ? (TRANSACTION_TAG_LABEL[t.tag] as string) : '',
     ]);
     downloadFile(toCsv([header, ...rows]), `registro-movimenti-${todayIso()}.csv`, 'text/csv;charset=utf-8;');
   }

@@ -16,7 +16,7 @@ import {
   todayIso,
   uid,
 } from './models';
-import { BUDGET_REPOSITORY } from './repository';
+import { BUDGET_REPOSITORY, TransactionQuery } from './repository';
 
 /** Annulla l'update ottimistico e avvisa l'utente se la scrittura remota fallisce. */
 function reportWriteFailure(err: unknown, rollback: () => void): void {
@@ -232,6 +232,13 @@ export class TransactionStore {
   readonly transactions = signal<Transaction[]>([]);
   readonly ready = signal(false);
 
+  /** Scatta quando una scrittura si è conclusa (successo o rollback): chi legge dal backend
+   * può rileggere senza correre contro l'update ottimistico ancora in volo. */
+  readonly revision = signal(0);
+  private readonly bumpRevision = (): void => {
+    this.revision.update((n) => n + 1);
+  };
+
   readonly sorted = computed(() =>
     [...this.transactions()].sort((a, b) => b.date.localeCompare(a.date)),
   );
@@ -257,32 +264,45 @@ export class TransactionStore {
     this.ready.set(true);
   }
 
+  queryTransactions(query: TransactionQuery, signal?: AbortSignal): Promise<Transaction[] | null> {
+    return this.repo.queryTransactions(query, signal);
+  }
+
   add(tx: Omit<Transaction, 'id'>): void {
     const newTx: Transaction = { ...tx, id: uid() };
     this.transactions.update((list) => [...list, newTx]);
-    this.repo.addTransaction(newTx).catch((err) =>
-      reportWriteFailure(err, () => this.transactions.update((list) => list.filter((t) => t.id !== newTx.id))),
-    );
+    this.repo
+      .addTransaction(newTx)
+      .catch((err) =>
+        reportWriteFailure(err, () => this.transactions.update((list) => list.filter((t) => t.id !== newTx.id))),
+      )
+      .finally(this.bumpRevision);
   }
 
   update(id: string, patch: Partial<Omit<Transaction, 'id'>>): void {
     const current = this.transactions().find((t) => t.id === id);
     this.transactions.update((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-    this.repo.updateTransaction(id, patch).catch((err) =>
-      reportWriteFailure(err, () => {
-        if (current) this.transactions.update((list) => list.map((t) => (t.id === id ? current : t)));
-      }),
-    );
+    this.repo
+      .updateTransaction(id, patch)
+      .catch((err) =>
+        reportWriteFailure(err, () => {
+          if (current) this.transactions.update((list) => list.map((t) => (t.id === id ? current : t)));
+        }),
+      )
+      .finally(this.bumpRevision);
   }
 
   remove(id: string): void {
     const removed = this.transactions().find((t) => t.id === id);
     this.transactions.update((list) => list.filter((t) => t.id !== id));
-    this.repo.removeTransaction(id).catch((err) =>
-      reportWriteFailure(err, () => {
-        if (removed) this.transactions.update((list) => [...list, removed]);
-      }),
-    );
+    this.repo
+      .removeTransaction(id)
+      .catch((err) =>
+        reportWriteFailure(err, () => {
+          if (removed) this.transactions.update((list) => [...list, removed]);
+        }),
+      )
+      .finally(this.bumpRevision);
   }
 
   /** Nessun bulk insert lato Supabase: N addTransaction in parallelo, rollback solo delle righe fallite. */
@@ -294,6 +314,7 @@ export class TransactionStore {
     if (failedIds.size) {
       this.transactions.update((list) => list.filter((t) => !failedIds.has(t.id)));
     }
+    this.bumpRevision();
     return {
       addedIds: newTxs.filter((t) => !failedIds.has(t.id)).map((t) => t.id),
       failedCount: failedIds.size,
@@ -305,12 +326,6 @@ export class TransactionStore {
     for (const tx of this.transactions().filter((t) => t.categoryId === fromCategoryId)) {
       this.update(tx.id, { categoryId: toCategoryId, subcategoryId: null });
     }
-  }
-
-  /** Movimenti di un mese: month è 1-based. */
-  byMonth(year: number, month: number): Transaction[] {
-    const prefix = `${year}-${String(month).padStart(2, '0')}`;
-    return this.sorted().filter((t) => t.date.startsWith(prefix));
   }
 
   inRange(fromIso: string, toIso: string): Transaction[] {
