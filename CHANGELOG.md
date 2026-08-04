@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.9.0](https://github.com/Cerebrobeso/budget-app/compare/v1.8.0...v1.9.0) (2026-08-04)
+
+### Features
+
+* **log:** add sticky month stamp for mobile view and implement intersection observer ([ecf8c8c](https://github.com/Cerebrobeso/budget-app/commit/ecf8c8cba4fd77adb85d7a6e70473bc0c33883b8))
+* **pwa:** rendi l'app installabile con service worker ([4e08cc8](https://github.com/Cerebrobeso/budget-app/commit/4e08cc8b31d134e9ea2e90dd19ec272118e7c6ac))
 ## [1.8.0](https://github.com/Cerebrobeso/budget-app/compare/v1.7.2...v1.8.0) (2026-08-04)
 
 ### Features
