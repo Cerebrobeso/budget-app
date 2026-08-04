@@ -19,6 +19,7 @@ import { HlmDialog, HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 import { TransactionForm } from './transaction-form';
 import {DatePipe} from '@angular/common';
@@ -50,6 +51,7 @@ function monthWindow(year: number, month: number): { from: string; before: strin
     CategorySwatchComponent,
     ...HlmDialogImports,
     ...HlmSelectImports,
+    ...HlmSpinnerImports,
     ...HlmTooltipImports,
     DatePipe
   ],

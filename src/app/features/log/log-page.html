@@ -19,8 +19,11 @@
     <div class="text-center">
 
 
-      <div class="font-display text-3xl font-extrabold tracking-tight leading-none">
+      <div class="relative font-display text-3xl font-extrabold tracking-tight leading-none">
         {{ monthStamp() }}
+        @if (txQuery.isLoading()) {
+          <hlm-spinner class="absolute top-1/2 left-full ml-2 -translate-y-1/2 text-[1rem]" />
+        }
       </div>
       <div class="text-sm uppercase tracking-widest text-muted-foreground">{{ monthLong() }} {{ year() }}</div>
     </div>
