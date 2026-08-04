@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.7.2](https://github.com/Cerebrobeso/budget-app/compare/v1.7.1...v1.7.2) (2026-08-04)
+
+### Features
+
+* **categories:** icona selezionabile per le categorie ([d7eee08](https://github.com/Cerebrobeso/budget-app/commit/d7eee0830940ddc1fb7d4ada32244c13b588fc3c))
+* **recurring:** allow editing an existing recurring rule ([ad0a5d0](https://github.com/Cerebrobeso/budget-app/commit/ad0a5d04795ee8efc8993fef6135f1e47211d29c))
 ## [1.7.1](https://github.com/Cerebrobeso/budget-app/compare/v1.6.1...v1.7.1) (2026-08-03)
 
 ### Features
