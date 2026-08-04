@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.8.0](https://github.com/Cerebrobeso/budget-app/compare/v1.7.2...v1.8.0) (2026-08-04)
+
+### Features
+
+* implement category and portfolio management with new stores ([aa8e12f](https://github.com/Cerebrobeso/budget-app/commit/aa8e12fd75b5b6b4aea98293c124ad08f5171151))
 ## [1.7.2](https://github.com/Cerebrobeso/budget-app/compare/v1.7.1...v1.7.2) (2026-08-04)
 
 ### Features
