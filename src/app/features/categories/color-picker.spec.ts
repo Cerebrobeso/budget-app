@@ -78,7 +78,7 @@ describe('ColorPickerComponent', () => {
   });
 
   describe('choose', () => {
-    it('sets draft, emits colorChange with the swatch, and closes the popover', () => {
+    it('sets draft and emits colorChange with the swatch, keeping the popover open so an icon can also be picked', () => {
       const fixture = createComponent('#ff0000');
       const component = fixture.componentInstance;
       const emitted: string[] = [];
@@ -89,7 +89,7 @@ describe('ColorPickerComponent', () => {
 
       expect(component['draft']()).toBe('#30CF30');
       expect(emitted).toEqual(['#30CF30']);
-      expect(component['state']()).toBe('closed');
+      expect(component['state']()).toBe('open');
     });
   });
 
@@ -159,7 +159,7 @@ describe('ColorPickerComponent', () => {
       expect(component['draft']()).toBe('not-a-color');
     });
 
-    it('normalizes draft, emits colorChange, and closes the popover when valid', () => {
+    it('normalizes draft and emits colorChange, keeping the popover open when valid', () => {
       const fixture = createComponent('#ff0000');
       const component = fixture.componentInstance;
       const emitted: string[] = [];
@@ -171,7 +171,7 @@ describe('ColorPickerComponent', () => {
 
       expect(emitted).toEqual(['#FF00AA']);
       expect(component['draft']()).toBe('#FF00AA');
-      expect(component['state']()).toBe('closed');
+      expect(component['state']()).toBe('open');
     });
   });
 

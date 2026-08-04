@@ -1,20 +1,11 @@
-import {
-  afterNextRender,
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  Injector,
-  signal,
-  viewChild,
-  viewChildren,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideGripVertical, lucidePencil, lucidePlus, lucideTrash2, lucideX } from '@ng-icons/lucide';
 import { Category, Subcategory } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
+import { CategorySwatchComponent } from './category-swatch';
 import { ColorPickerComponent } from './color-picker';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -36,6 +27,10 @@ import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
     HlmBadge,
     NgIcon,
     ColorPickerComponent,
+    CategorySwatchComponent,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
     ...HlmTabsImports,
     ...HlmDialogImports,
     ...HlmSelectImports,
@@ -48,19 +43,16 @@ import { HlmTooltipImports } from '@spartan-ng/helm/tooltip';
 export class CategoriesPage {
   protected readonly store = inject(CategoryStore);
   private readonly txStore = inject(TransactionStore);
-  private readonly injector = inject(Injector);
-  private readonly cardEls = viewChildren<ElementRef<HTMLElement>>('catCard');
 
   readonly newName = signal('');
   readonly newColor = signal('#2e46d1');
+  readonly newIcon = signal<string | null>(null);
   readonly newKind = signal<'expense' | 'income'>('expense');
   readonly newSubName = signal<Record<string, string>>({});
   readonly editingCat = signal<string | null>(null);
   readonly editingSub = signal<string | null>(null);
   readonly editName = signal('');
   readonly deletingCat = signal<Category | null>(null);
-  readonly draggingId = signal<string | null>(null);
-  readonly dragOverId = signal<string | null>(null);
   /** Cosa fare dei movimenti già registrati con la categoria che si sta eliminando. */
   readonly reassignMode = signal<'fallback' | 'pick'>('fallback');
   readonly reassignTarget = signal<string>('');
@@ -94,7 +86,7 @@ export class CategoriesPage {
   add(): void {
     const name = this.newName().trim();
     if (!name) return;
-    this.store.addCategory(name, this.newKind(), this.newColor());
+    this.store.addCategory(name, this.newKind(), this.newColor(), this.newIcon());
     this.newName.set('');
   }
 
@@ -172,72 +164,13 @@ export class CategoriesPage {
     return !cat.shared || this.store.isAdmin();
   }
 
-  onDragStart(cat: Category, event: DragEvent): void {
-    this.draggingId.set(cat.id);
-    event.dataTransfer?.setData('text/plain', cat.id);
-    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
-  }
-
-  onDragOver(cat: Category, event: DragEvent): void {
-    if (!this.draggingId()) return;
-    event.preventDefault();
-    this.dragOverId.set(cat.id);
-  }
-
-  onDrop(target: Category, event: DragEvent): void {
-    event.preventDefault();
-    const draggedId = this.draggingId();
-    this.draggingId.set(null);
-    this.dragOverId.set(null);
-    if (!draggedId || draggedId === target.id) return;
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const position = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
-    const before = this.captureRects();
-    this.store.moveCategory(draggedId, target.id, position);
-    this.playFlip(before);
-  }
-
-  onDragEnd(): void {
-    this.draggingId.set(null);
-    this.dragOverId.set(null);
-  }
-
-  private captureRects(): Map<string, DOMRect> {
-    const rects = new Map<string, DOMRect>();
-    for (const ref of this.cardEls()) {
-      const el = ref.nativeElement;
-      const id = el.dataset['catId'];
-      if (id) rects.set(id, el.getBoundingClientRect());
-    }
-    return rects;
-  }
-
-  /**
-   * Animazione FLIP: dopo il riordino, ogni card riparte visivamente dalla sua vecchia
-   * posizione (via transform) e scivola in quella nuova, invece di scattare di colpo.
-   */
-  private playFlip(before: Map<string, DOMRect>): void {
-    afterNextRender(
-      () => {
-        for (const ref of this.cardEls()) {
-          const el = ref.nativeElement;
-          const id = el.dataset['catId'];
-          const prev = id ? before.get(id) : undefined;
-          if (!prev) continue;
-          const next = el.getBoundingClientRect();
-          const dy = prev.top - next.top;
-          if (Math.abs(dy) < 1) continue;
-          el.style.transition = 'none';
-          el.style.transform = `translateY(${dy}px)`;
-          el.getBoundingClientRect(); // forza il reflow prima di riattivare la transition
-          el.style.transition = 'transform 200ms ease';
-          el.style.transform = '';
-          el.addEventListener('transitionend', () => {
-            el.style.transition = '';
-          }, { once: true });
-        }
-      },
-      { injector: this.injector },
-    );
+  /** cdk-drag-drop gestisce da solo mouse, touch e l'animazione di riordino. */
+  onDrop(event: CdkDragDrop<Category[]>): void {
+    const list = event.container.data;
+    const draggedId = list[event.previousIndex]?.id;
+    if (!draggedId || event.previousIndex === event.currentIndex) return;
+    const targetId = list[event.currentIndex].id;
+    const position = event.currentIndex < event.previousIndex ? 'before' : 'after';
+    this.store.moveCategory(draggedId, targetId, position);
   }
 }

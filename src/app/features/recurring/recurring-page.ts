@@ -13,6 +13,7 @@ import {
   parseAmountMask,
   stringifyAmountMask,
 } from '../../core/format';
+import { CategorySwatchComponent } from '../categories/category-swatch';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
@@ -31,6 +32,7 @@ import { toast } from '@spartan-ng/brain/sonner';
     FormsModule,
     MaskitoDirective,
     NgIcon,
+    CategorySwatchComponent,
     HlmButton,
     HlmCard,
     HlmInput,

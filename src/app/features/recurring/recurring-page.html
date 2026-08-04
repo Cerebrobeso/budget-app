@@ -207,10 +207,10 @@
       class="mb-3 flex flex-wrap gap-3 p-4 md:flex-nowrap"
     >
       <div class="flex flex-wrap items-center gap-3 px-4 py-3.5 md:flex-nowrap">
-        <span
-          class="size-3 shrink-0 rounded-full"
-          [style.background]="catStore.color(rule.categoryId)"
-        ></span>
+        <app-category-swatch
+          [color]="catStore.color(rule.categoryId)"
+          [icon]="catStore.icon(rule.categoryId)"
+        />
         <div class="min-w-0 flex-1">
           <div class="font-medium">
             {{ rule.description || categoryName(rule.categoryId) }}
@@ -282,10 +282,10 @@
       class="mb-3 flex flex-wrap gap-3 p-4 opacity-70 md:flex-nowrap"
     >
       <div class="flex flex-wrap items-center gap-3 px-4 py-3.5 md:flex-nowrap">
-        <span
-          class="size-3 shrink-0 rounded-full"
-          [style.background]="catStore.color(rule.categoryId)"
-        ></span>
+        <app-category-swatch
+          [color]="catStore.color(rule.categoryId)"
+          [icon]="catStore.icon(rule.categoryId)"
+        />
         <div class="min-w-0 flex-1">
           <div class="font-medium">
             {{ rule.description || categoryName(rule.categoryId) }}

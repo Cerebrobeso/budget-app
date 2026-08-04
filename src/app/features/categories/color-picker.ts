@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCheck } from '@ng-icons/lucide';
+import { lucideCheck, lucideX } from '@ng-icons/lucide';
 import type { BrnOverlayState } from '@spartan-ng/brain/overlay';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmPopoverImports } from '@spartan-ng/helm/popover';
+import { CATEGORY_ICONS, CATEGORY_ICON_NAMES } from './category-icons';
+import { CategorySwatchComponent, readableForeground } from './category-swatch';
 
 /**
  * Tinte di default in ordine di tonalità (come una ruota dei colori): stessa
@@ -50,20 +52,23 @@ function normalizeHex(raw: string): string | null {
 @Component({
   selector: 'app-color-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, HlmInput, NgIcon, ...HlmPopoverImports],
-  providers: [provideIcons({ lucideCheck })],
+  imports: [FormsModule, HlmInput, NgIcon, CategorySwatchComponent, ...HlmPopoverImports],
+  providers: [provideIcons({ lucideCheck, lucideX, ...CATEGORY_ICONS })],
   templateUrl: './color-picker.html',
 })
 export class ColorPickerComponent {
   readonly color = input.required<string>();
+  readonly icon = input<string | null>(null);
   /** Colori già assegnati ad altre categorie: mostrati con un indicatore nella tavolozza, ma restano selezionabili. */
   readonly usedColors = input<string[]>([]);
-  readonly size = input<'sm' | 'default'>('default');
   readonly buttonId = input<string>();
   readonly ariaLabel = input<string>();
   readonly colorChange = output<string>();
+  readonly iconChange = output<string | null>();
 
   protected readonly presets = PRESET_COLORS;
+  protected readonly icons = CATEGORY_ICON_NAMES;
+  protected readonly readableForeground = readableForeground;
   protected readonly state = signal<BrnOverlayState>('closed');
   protected readonly draft = signal('');
   protected readonly draftPreview = computed(() => normalizeHex(this.draft()));
@@ -85,7 +90,6 @@ export class ColorPickerComponent {
   protected choose(swatch: string): void {
     this.draft.set(swatch);
     this.colorChange.emit(swatch);
-    this.state.set('closed');
   }
 
   protected onDraftChange(value: string): void {
@@ -99,6 +103,18 @@ export class ColorPickerComponent {
     if (!normalized) return;
     this.draft.set(normalized);
     this.colorChange.emit(normalized);
-    this.state.set('closed');
+  }
+
+  protected isActiveIcon(name: string): boolean {
+    return this.icon() === name;
+  }
+
+  protected chooseIcon(name: string | null): void {
+    this.iconChange.emit(name);
+  }
+
+  /** Nome leggibile per aria-label/title: 'lucideShoppingCart' -> 'Shopping Cart'. */
+  protected iconLabel(name: string): string {
+    return name.replace(/^lucide/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 }

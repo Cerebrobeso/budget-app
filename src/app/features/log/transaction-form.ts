@@ -13,6 +13,7 @@ import { MaskitoDirective } from '@maskito/angular';
 import { Transaction, TransactionTag, TransactionType, TRANSFER_CATEGORY_ID, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { AMOUNT_MASK, dateToIso, isoToDate, parseAmountMask, stringifyAmountMask } from '../../core/format';
+import { CategorySwatchComponent } from '../categories/category-swatch';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmInput } from '@spartan-ng/helm/input';
@@ -29,7 +30,7 @@ let formIdSeq = 0;
 @Component({
   selector: 'app-transaction-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, MaskitoDirective, HlmButton, HlmInput, HlmLabel, ...HlmSelectImports, ...HlmDatePickerImports],
+  imports: [FormsModule, MaskitoDirective, CategorySwatchComponent, HlmButton, HlmInput, HlmLabel, ...HlmSelectImports, ...HlmDatePickerImports],
   templateUrl: './transaction-form.html',
   styleUrl: './transaction-form.css',
 })

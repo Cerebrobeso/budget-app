@@ -3,12 +3,11 @@
     hlmPopoverTrigger
     type="button"
     [attr.id]="buttonId() ?? null"
-    class="shrink-0 cursor-pointer rounded-full border border-border shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    [class.size-8]="size() === 'default'"
-    [class.size-5]="size() === 'sm'"
-    [style.background]="color()"
+    class="group flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     [attr.aria-label]="ariaLabel() ?? ('Colore: ' + color())"
-  ></button>
+  >
+    <app-category-swatch [color]="color()" [icon]="icon()" />
+  </button>
 
   <hlm-popover-content class="w-72" *hlmPopoverPortal="let ctx">
     <p class="mb-1.5 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Colore</p>
@@ -24,7 +23,8 @@
           (click)="choose(swatch)"
         >
           @if (isActive(swatch)) {
-            <ng-icon name="lucideCheck" class="absolute inset-0 m-auto text-white drop-shadow" size="14" />
+            <ng-icon name="lucideCheck" class="absolute inset-0 m-auto drop-shadow" size="14"
+                     [class.text-white]="readableForeground(swatch) === 'white'" [class.text-black]="readableForeground(swatch) === 'black'" />
           } @else if (isUsed(swatch)) {
             <span class="absolute -end-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-popover bg-foreground/60"></span>
           }
@@ -41,12 +41,39 @@
         hlmInput
         class="h-8 flex-1 font-mono text-sm uppercase"
         type="text"
+        aria-label="Colore in esadecimale"
         placeholder="#2E46D1"
         maxlength="7"
         [ngModel]="draft()"
         (ngModelChange)="onDraftChange($event)"
         (keydown.enter)="applyDraft()"
       />
+    </div>
+
+    <p class="mb-1.5 mt-3 border-t border-border pt-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Icona (facoltativa)</p>
+    <div class="grid grid-cols-6 gap-2">
+      <button
+        type="button"
+        class="relative flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border bg-muted transition-transform hover:scale-110"
+        [class]="icon() === null ? 'border-foreground' : 'border-transparent'"
+        title="Nessuna icona"
+        aria-label="Nessuna icona"
+        (click)="chooseIcon(null)"
+      >
+        <ng-icon name="lucideX" size="18" class="text-muted-foreground" />
+      </button>
+      @for (name of icons; track name) {
+        <button
+          type="button"
+          class="relative flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border bg-muted transition-transform hover:scale-110"
+          [class]="isActiveIcon(name) ? 'border-foreground' : 'border-transparent'"
+          [attr.title]="iconLabel(name)"
+          [attr.aria-label]="'Seleziona icona ' + iconLabel(name)"
+          (click)="chooseIcon(name)"
+        >
+          <ng-icon [name]="name" size="18" />
+        </button>
+      }
     </div>
   </hlm-popover-content>
 </hlm-popover>

@@ -90,6 +90,8 @@ export interface Category {
   /** Categorie riservate alle entrate vengono proposte solo nel form entrata */
   kind: 'expense' | 'income';
   color: string;
+  /** Nome della costante lucide (es. 'lucideCoffee'). null = azzerata esplicitamente, assente = mai impostata. */
+  icon?: string | null;
   archived?: boolean;
   subcategories: Subcategory[];
   /**

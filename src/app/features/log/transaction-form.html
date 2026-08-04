@@ -26,7 +26,7 @@
   </div>
 
   <!-- Tipo -->
-  <div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tipo di movimento">
+  <div class="grid grid-cols-3 gap-2" role="group" aria-label="Tipo di movimento">
     <button
       type="button"
       hlmBtn
@@ -72,7 +72,7 @@
     </p>
   } @else {
     <!-- Categoria + sottocategoria -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
         <label hlmLabel for="tx-category">Categoria</label>
         <div hlmSelect [value]="categoryId()" (valueChange)="onCategoryChange($event)" [disabled]="type() === null" [itemToString]="categoryLabel">
@@ -82,7 +82,7 @@
           <hlm-select-content *hlmSelectPortal>
             @for (cat of availableCategories(); track cat.id) {
               <hlm-select-item [value]="cat.id">
-                <span class="mr-2 inline-block size-2.5 rounded-full" [style.background]="cat.color"></span>
+                <app-category-swatch class="mr-2 inline-block" [color]="cat.color" [icon]="cat.icon ?? null" />
                 {{ cat.name }}
               </hlm-select-item>
             }
@@ -106,7 +106,7 @@
   }
 
   <!-- Data + descrizione -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
     <div>
       <label hlmLabel for="tx-date">Data</label>
       <hlm-date-picker class="w-full" [date]="dateValue()" [disabled]="type() === null" (dateChange)="onDateChange($event)">

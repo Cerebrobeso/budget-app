@@ -1,0 +1,8 @@
+<span
+  class="pointer-events-none inline-flex size-11 shrink-0 items-center justify-center rounded-[30%] border border-border shadow-sm transition-transform group-hover:scale-105"
+  [style.background]="color()"
+>
+  @if (icon()) {
+    <ng-icon [name]="icon()!" [style.color]="tint()" size="26" />
+  }
+</span>

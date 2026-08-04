@@ -185,7 +185,7 @@ describe('CategoriesPage', () => {
 
       page.add();
 
-      expect(store.addCategory).toHaveBeenCalledWith('Bollette', 'income', '#abcdef');
+      expect(store.addCategory).toHaveBeenCalledWith('Bollette', 'income', '#abcdef', null);
       expect(page.newName()).toBe('');
     });
   });

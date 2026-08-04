@@ -107,8 +107,12 @@ export class CategoryStore {
     return this.byId(categoryId)?.color ?? '#6B6F68';
   }
 
-  addCategory(name: string, kind: 'expense' | 'income', color: string): void {
-    const cat: Category = { id: uid(), name, kind, color, subcategories: [{ id: uid(), name: 'Altro' }] };
+  icon(categoryId: string): string | null {
+    return this.byId(categoryId)?.icon ?? null;
+  }
+
+  addCategory(name: string, kind: 'expense' | 'income', color: string, icon: string | null = null): void {
+    const cat: Category = { id: uid(), name, kind, color, icon, subcategories: [{ id: uid(), name: 'Altro' }] };
     this.categories.update((list) => [...list, cat]);
     this.repo.addCategory(cat).catch((err) =>
       reportWriteFailure(err, () => this.categories.update((list) => list.filter((c) => c.id !== cat.id))),
@@ -121,6 +125,10 @@ export class CategoryStore {
 
   setColor(id: string, color: string): void {
     this.patch(id, () => ({ color }));
+  }
+
+  setIcon(id: string, icon: string | null): void {
+    this.patch(id, () => ({ icon }));
   }
 
   removeCategory(id: string): void {

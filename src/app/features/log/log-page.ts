@@ -11,6 +11,7 @@ import { TransactionQuery } from '../../core/repository';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { dateToIso, eur, eurSigned, formatDayLabel, monthLongLabel, monthShortLabel } from '../../core/format';
 import { downloadFile, toCsv } from '../../core/export';
+import { CategorySwatchComponent } from '../categories/category-swatch';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmButtonGroupImports } from '@spartan-ng/helm/button-group';
 import { HlmCard } from '@spartan-ng/helm/card';
@@ -46,6 +47,7 @@ function monthWindow(year: number, month: number): { from: string; before: strin
     HlmLabel,
     NgIcon,
     TransactionForm,
+    CategorySwatchComponent,
     ...HlmDialogImports,
     ...HlmSelectImports,
     ...HlmTooltipImports,

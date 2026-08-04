@@ -1,3 +1,5 @@
+<h1 class="sr-only">Movimenti</h1>
+
 <!-- Timbro del mese: il saldo come split di gara -->
 <section hlmCard class="mt-6 mb-4 overflow-hidden" style="--card-spacing: 0;">
 	<div class="flex items-center justify-center w-full">
@@ -65,7 +67,7 @@
     <input hlmInput id="search" type="text" placeholder="Cerca per descrizione, in tutti i mesi…"
            class="pl-9" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     @if (search()) {
-      <button hlmBtn variant="ghost" size="icon" class="absolute right-1 top-1/2 size-7! -translate-y-1/2"
+      <button hlmBtn variant="ghost" size="icon" class="absolute right-1 top-1/2 size-11 -translate-y-1/2 md:size-7"
               aria-label="Cancella ricerca" hlmTooltip="Cancella ricerca" (click)="search.set('')">
         <ng-icon name="lucideX" size="14" />
       </button>
@@ -95,7 +97,7 @@
         <hlm-select-item value="__all__">Tutte le categorie</hlm-select-item>
         @for (cat of catStore.active(); track cat.id) {
           <hlm-select-item [value]="cat.id">
-            <span class="mr-2 inline-block size-2.5 rounded-full" [style.background]="cat.color"></span>
+            <app-category-swatch class="mr-2 inline-block" [color]="cat.color" [icon]="cat.icon ?? null" />
             {{ cat.name }}
           </hlm-select-item>
         }
@@ -153,8 +155,8 @@
         @for (tx of group.items; track tx.id) {
           <div class="flex flex-wrap items-center gap-3 px-4 py-3.5 md:flex-nowrap"
                [class.bg-expense-soft]="tx.tag === 'unexpected'" [class.bg-accent-soft]="tx.tag === 'planned'">
-            <span class="size-2.5 shrink-0 rounded-full" [style.background]="catStore.color(tx.categoryId)"
-                  [attr.aria-hidden]="true"></span>
+            <app-category-swatch [color]="catStore.color(tx.categoryId)" [icon]="catStore.icon(tx.categoryId)"
+                                 [attr.aria-hidden]="true" />
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-1.5 truncate text-base font-medium">
                 @if (tx.tag === 'unexpected') {
@@ -188,11 +190,11 @@
                          size="16" class="mr-1" />
                 {{ tagLabel(tx.tag) }}
               </button>
-              <button hlmBtn variant="ghost" size="icon"
+              <button hlmBtn variant="ghost" size="icon" class="size-11 md:size-8"
                       [attr.aria-label]="'Modifica ' + (tx.description || 'movimento')"
                       hlmTooltip="Modifica"
                       (click)="startEdit(tx)"><ng-icon name="lucidePencil" size="16" /></button>
-              <button hlmBtn variant="ghost" size="icon" class="text-expense"
+              <button hlmBtn variant="ghost" size="icon" class="size-11 text-expense md:size-8"
                       [attr.aria-label]="'Elimina ' + (tx.description || 'movimento')"
                       hlmTooltip="Elimina"
                       (click)="askDelete(tx)"><ng-icon name="lucideTrash2" size="16" /></button>
@@ -209,14 +211,13 @@
   <hlm-dialog-content
     *hlmDialogPortal
     class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
-           sm:max-w-none
            md:relative md:inset-auto md:h-auto md:w-full md:max-w-sm md:max-h-[calc(100dvh-2rem)] md:rounded-xl"
   >
-    <hlm-dialog-header>
+    <hlm-dialog-header class="max-md:pt-[env(safe-area-inset-top)]">
       <h2 hlmDialogTitle class="text-xl font-display font-bold">Modifica movimento</h2>
     </hlm-dialog-header>
     <app-transaction-form #txForm class="flex min-h-0 flex-1 flex-col" [transaction]="editing()" (saved)="editDialog.close({})" />
-    <hlm-dialog-footer class="rounded-b-none md:rounded-b-xl">
+    <hlm-dialog-footer class="rounded-b-none max-md:pb-[env(safe-area-inset-bottom)] md:rounded-b-xl">
       <button hlmBtn size="lg" type="submit" [attr.form]="txForm.formId" class="w-full font-display font-bold">
         Salva modifiche
       </button>

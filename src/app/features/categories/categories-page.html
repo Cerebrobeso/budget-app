@@ -9,7 +9,7 @@
   <div hlmTabsContent="attive">
     <!-- Nuova categoria -->
     <div hlmCard class="mb-4 p-4">
-      <div class="flex flex-wrap items-end gap-3">
+      <div class="flex flex-wrap items-start gap-3">
         <div class="min-w-40 flex-1">
           <label class="mb-1.5 block text-sm font-semibold uppercase tracking-wider text-muted-foreground" for="new-cat">Nuova categoria</label>
           <input hlmInput id="new-cat" type="text" placeholder="Nome categoria"
@@ -17,44 +17,44 @@
         </div>
         <div class="flex flex-col">
           <label class="mb-1.5 block text-sm font-semibold uppercase tracking-wider text-muted-foreground" for="new-color">Colore</label>
-          <app-color-picker buttonId="new-color" [color]="newColor()" [usedColors]="otherColors()" (colorChange)="newColor.set($event)" />
+          <app-color-picker buttonId="new-color" [color]="newColor()" [icon]="newIcon()" [usedColors]="otherColors()"
+                            (colorChange)="newColor.set($event)" (iconChange)="newIcon.set($event)" />
         </div>
         <div class="flex flex-col">
           <label class="mb-1.5 block text-sm font-semibold uppercase tracking-wider text-muted-foreground" id="new-kind-label">Tipo</label>
           <div class="flex h-8 items-center rounded-full border border-border bg-surface p-0.5" role="group" aria-labelledby="new-kind-label">
             <button type="button" class="flex h-full items-center rounded-full px-3 text-sm font-medium transition-colors"
                     [class]="newKind() === 'income' ? 'bg-income text-white' : 'text-muted-foreground hover:bg-muted'"
+                    [attr.aria-pressed]="newKind() === 'income'"
                     (click)="newKind.set('income')">Entrata</button>
             <button type="button" class="flex h-full items-center rounded-full px-3 text-sm font-medium transition-colors"
                     [class]="newKind() === 'expense' ? 'bg-expense text-white' : 'text-muted-foreground hover:bg-muted'"
+                    [attr.aria-pressed]="newKind() === 'expense'"
                     (click)="newKind.set('expense')">Uscita</button>
           </div>
         </div>
-        <button hlmBtn (click)="add()" [disabled]="!newName().trim()"><ng-icon name="lucidePlus" class="mr-1" size="14" /> Aggiungi</button>
+        <div class="flex flex-col justify-end self-stretch">
+          <button hlmBtn (click)="add()" [disabled]="!newName().trim()"><ng-icon name="lucidePlus" class="mr-1" size="14" /> Aggiungi</button>
+        </div>
       </div>
     </div>
 
+    <div cdkDropList [cdkDropListData]="store.active()" (cdkDropListDropped)="onDrop($event)">
     @for (cat of store.active(); track cat.id) {
-      <div hlmCard #catCard class="mb-3 p-4 transition-[transform,box-shadow,border-color,opacity] duration-150"
-           [attr.data-cat-id]="cat.id"
-           [class.border-primary]="dragOverId() === cat.id"
-           [class]="draggingId() === cat.id ? 'scale-[1.02] shadow-lg opacity-60' : ''"
-           [attr.draggable]="canReorder(cat) ? true : null"
-           (dragstart)="onDragStart(cat, $event)"
-           (dragover)="onDragOver(cat, $event)"
-           (drop)="onDrop(cat, $event)"
-           (dragend)="onDragEnd()">
+      <div hlmCard cdkDrag [cdkDragDisabled]="!canReorder(cat)" class="mb-3 p-4">
         <div class="flex flex-wrap items-center gap-3">
           @if (canReorder(cat)) {
-            <span class="cursor-grab text-muted-foreground" [attr.aria-label]="'Riordina ' + cat.name">
+            <button type="button" cdkDragHandle
+                    class="flex size-11 shrink-0 cursor-grab items-center justify-center text-muted-foreground touch-none"
+                    [attr.aria-label]="'Riordina ' + cat.name">
               <ng-icon name="lucideGripVertical" size="16" />
-            </span>
+            </button>
           }
           @if (cat.shared && !store.isAdmin()) {
-            <span class="size-5 shrink-0 rounded-full" [style.background]="cat.color" [attr.aria-label]="'Colore di ' + cat.name"></span>
+            <app-category-swatch [color]="cat.color" [icon]="cat.icon ?? null" [attr.aria-label]="'Colore di ' + cat.name" />
           } @else {
-            <app-color-picker size="sm" [color]="cat.color" [usedColors]="otherColors(cat.id)" [ariaLabel]="'Colore di ' + cat.name"
-                              (colorChange)="store.setColor(cat.id, $event)" />
+            <app-color-picker [color]="cat.color" [icon]="cat.icon ?? null" [usedColors]="otherColors(cat.id)" [ariaLabel]="'Aspetto di ' + cat.name"
+                              (colorChange)="store.setColor(cat.id, $event)" (iconChange)="store.setIcon(cat.id, $event)" />
           }
           @if (editingCat() === cat.id) {
             <input hlmInput class="max-w-60" type="text" [ngModel]="editName()" (ngModelChange)="editName.set($event)"
@@ -90,16 +90,16 @@
               <li class="flex items-center gap-1 rounded-full border px-3 py-1 text-sm"
                   [class]="sub.overlay ? 'border-dashed border-border bg-background' : 'border-border bg-background'">
                 @if (editingSub() === cat.id + '/' + sub.id) {
-                  <input class="w-32 bg-transparent outline-none" type="text"
+                  <input class="w-32 bg-transparent text-base outline-none" type="text"
                          [ngModel]="editName()" (ngModelChange)="editName.set($event)"
                          (keydown.enter)="saveSubName(cat, sub)" />
                   <button class="cursor-pointer font-semibold text-primary" (click)="saveSubName(cat, sub)">OK</button>
                 } @else {
                   {{ sub.name }}
                   @if (!cat.shared || sub.overlay || store.isAdmin()) {
-                    <button class="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
+                    <button class="ml-1 inline-flex items-center cursor-pointer text-muted-foreground hover:text-foreground"
                             [attr.aria-label]="'Rinomina ' + sub.name" hlmTooltip="Rinomina" (click)="startEditSub(cat, sub)"><ng-icon name="lucidePencil" size="13" /></button>
-                    <button class="cursor-pointer text-muted-foreground hover:text-expense"
+                    <button class="inline-flex items-center cursor-pointer text-muted-foreground hover:text-expense"
                             [attr.aria-label]="'Archivia ' + sub.name" hlmTooltip="Archivia" (click)="store.setSubArchived(cat.id, sub.id, true)"><ng-icon name="lucideX" size="13" /></button>
                   }
                 }
@@ -109,7 +109,7 @@
           <li>
             <form class="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-sm"
                   (submit)="$event.preventDefault(); addSub(cat)">
-              <input class="w-28 bg-transparent outline-none placeholder:text-muted-foreground" type="text"
+              <input class="w-36 bg-transparent outline-none placeholder:text-muted-foreground" type="text"
                      placeholder="+ sottocategoria" [name]="'sub-' + cat.id"
                      [ngModel]="subDraft(cat.id)" (ngModelChange)="setNewSub(cat.id, $event)" />
               @if (subDraft(cat.id).trim()) {
@@ -120,6 +120,7 @@
         </ul>
       </div>
     }
+    </div>
   </div>
 
   <div hlmTabsContent="archiviate">
@@ -128,7 +129,7 @@
     }
     @for (cat of archived(); track cat.id) {
       <div hlmCard class="mb-3 flex flex-wrap items-center gap-3 p-4 opacity-70">
-        <span class="size-3 rounded-full" [style.background]="cat.color"></span>
+        <app-category-swatch [color]="cat.color" [icon]="cat.icon ?? null" />
         <h2 class="font-display text-lg font-bold">{{ cat.name }}</h2>
         @if (!cat.shared || store.isAdmin()) {
           <div class="ml-auto flex gap-1">
@@ -142,7 +143,7 @@
     }
     @for (item of archivedSubs(); track item.cat.id + item.sub.id) {
       <div hlmCard class="mb-2 flex flex-wrap items-center gap-3 px-4 py-2 text-sm opacity-70">
-        <span class="size-2.5 rounded-full" [style.background]="item.cat.color"></span>
+        <app-category-swatch [color]="item.cat.color" [icon]="item.cat.icon ?? null" />
         {{ item.cat.name }} · {{ item.sub.name }}
         @if (!item.cat.shared || item.sub.overlay || store.isAdmin()) {
           <button hlmBtn variant="outline" size="sm" class="ml-auto"
