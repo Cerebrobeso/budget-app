@@ -68,7 +68,7 @@
     <button
       hlmBtn
       size="icon"
-      class="fixed bottom-20 right-4 z-40 shadow-xl shadow-primary/30 md:hidden"
+      class="fixed bottom-20 right-4 z-40 size-11 shadow-xl shadow-primary/30 md:hidden"
       aria-label="Aggiungi movimento"
       (click)="openQuickAdd()"
     ><ng-icon name="lucidePlus" /></button>
@@ -78,15 +78,14 @@
   <hlm-dialog #quickAdd="hlmDialog" closeDelay="100">
     <hlm-dialog-content
       *hlmDialogPortal
-      class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
-             sm:max-w-none
+      class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
              md:relative md:inset-auto md:h-auto md:w-full md:max-w-sm md:max-h-[calc(100dvh-2rem)] md:rounded-xl"
     >
-      <hlm-dialog-header>
+      <hlm-dialog-header class="max-md:pt-[env(safe-area-inset-top)]">
         <h2 hlmDialogTitle class="text-xl font-display font-bold">Nuovo movimento</h2>
       </hlm-dialog-header>
       <app-transaction-form #txForm class="flex min-h-0 flex-1 flex-col" (saved)="quickAdd.close({})" />
-      <hlm-dialog-footer class="rounded-b-none md:rounded-b-xl">
+      <hlm-dialog-footer class="rounded-b-none max-md:pb-[env(safe-area-inset-bottom)] md:rounded-b-xl">
         <button hlmBtn size="lg" type="submit" [attr.form]="txForm.formId" class="w-full font-display font-bold">
           Aggiungi movimento
         </button>

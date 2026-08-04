@@ -78,7 +78,7 @@
       </button>
       <button hlmBtn variant="ghost" size="sm" class="ml-auto text-muted-foreground"
               (click)="store.setArchived(asset.id, true)">Archivia</button>
-      <button hlmBtn variant="ghost" size="sm" class="text-expense" [attr.aria-label]="'Elimina ' + asset.name"
+      <button hlmBtn variant="ghost" size="sm" class="size-11 text-expense md:size-7" [attr.aria-label]="'Elimina ' + asset.name"
               hlmTooltip="Elimina" (click)="askDeleteAsset(asset)"><ng-icon name="lucideTrash2" size="14" /></button>
     </div>
     @if (expanded() === asset.id) {
@@ -96,7 +96,7 @@
               <td class="figure py-1.5">{{ fmtDate(snap.date) }}</td>
               <td class="figure py-1.5 text-right">{{ fmt(snap.value) }}</td>
               <td class="py-1.5 text-right">
-                <button class="cursor-pointer text-muted-foreground hover:text-expense"
+                <button class="inline-flex size-11 cursor-pointer items-center justify-center text-muted-foreground hover:text-expense md:size-7"
                         [attr.aria-label]="'Elimina snapshot del ' + fmtDate(snap.date)"
                         hlmTooltip="Elimina snapshot"
                         (click)="store.removeSnapshot(asset.id, snap.date)"><ng-icon name="lucideX" size="14" /></button>
@@ -115,7 +115,7 @@
       <div hlmCard class="mt-2 flex items-center gap-3 p-3 opacity-70">
         {{ asset.name }}
         <button hlmBtn variant="outline" size="sm" class="ml-auto" (click)="store.setArchived(asset.id, false)">Ripristina</button>
-        <button hlmBtn variant="ghost" size="sm" class="text-expense" [attr.aria-label]="'Elimina ' + asset.name"
+        <button hlmBtn variant="ghost" size="sm" class="size-11 text-expense md:size-7" [attr.aria-label]="'Elimina ' + asset.name"
                 hlmTooltip="Elimina" (click)="askDeleteAsset(asset)"><ng-icon name="lucideTrash2" size="14" /></button>
       </div>
     }
@@ -126,11 +126,10 @@
 <hlm-dialog #assetDialog="hlmDialog" closeDelay="100">
   <hlm-dialog-content
     *hlmDialogPortal
-    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
-           sm:max-w-none
+    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
            md:relative md:inset-auto md:h-auto md:w-full md:max-w-sm md:max-h-[calc(100dvh-2rem)] md:rounded-xl"
   >
-    <hlm-dialog-header>
+    <hlm-dialog-header class="max-md:pt-[env(safe-area-inset-top)]">
       <h2 hlmDialogTitle class="text-xl font-display font-bold">Nuova posizione</h2>
     </hlm-dialog-header>
     <form id="asset-form" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 -mx-1" (submit)="$event.preventDefault(); saveAsset()">
@@ -167,7 +166,7 @@
         </div>
       </div>
     </form>
-    <hlm-dialog-footer class="rounded-b-none md:rounded-b-xl">
+    <hlm-dialog-footer class="rounded-b-none max-md:pb-[env(safe-area-inset-bottom)] md:rounded-b-xl">
       <button hlmBtn size="lg" type="submit" form="asset-form" class="w-full font-display font-bold">Aggiungi posizione</button>
     </hlm-dialog-footer>
   </hlm-dialog-content>
@@ -177,11 +176,10 @@
 <hlm-dialog #snapDialog="hlmDialog" closeDelay="100">
   <hlm-dialog-content
     *hlmDialogPortal
-    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
-           sm:max-w-none
+    class="fixed inset-0 flex h-dvh w-dvw max-w-none flex-col rounded-none overflow-hidden
            md:relative md:inset-auto md:h-auto md:w-full md:max-w-sm md:max-h-[calc(100dvh-2rem)] md:rounded-xl"
   >
-    <hlm-dialog-header>
+    <hlm-dialog-header class="max-md:pt-[env(safe-area-inset-top)]">
       <h2 hlmDialogTitle class="text-xl font-display font-bold">Snapshot — {{ snapAsset()?.name }}</h2>
     </hlm-dialog-header>
     <form id="snap-form" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 -mx-1" (submit)="$event.preventDefault(); saveSnapshot()">
@@ -199,7 +197,7 @@
         <p class="mt-1 text-sm text-muted-foreground">Uno snapshot alla stessa data sostituisce il precedente.</p>
       </div>
     </form>
-    <hlm-dialog-footer class="rounded-b-none md:rounded-b-xl">
+    <hlm-dialog-footer class="rounded-b-none max-md:pb-[env(safe-area-inset-bottom)] md:rounded-b-xl">
       <button hlmBtn size="lg" type="submit" form="snap-form" class="w-full font-display font-bold">Salva snapshot</button>
     </hlm-dialog-footer>
   </hlm-dialog-content>

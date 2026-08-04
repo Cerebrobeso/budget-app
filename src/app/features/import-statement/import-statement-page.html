@@ -35,7 +35,7 @@
         }
       </p>
 
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label hlmLabel for="map-date">Data</label>
           <div hlmSelect [value]="dateColumnValue()" (valueChange)="dateColumn.set(toColumnIndex($event))" [itemToString]="columnLabelFor">
@@ -79,18 +79,18 @@
 
       <div class="mt-4">
         <label hlmLabel>Importo</label>
-        <div hlmButtonGroup class="mb-3 w-full sm:w-auto">
-          <button hlmBtn type="button" size="sm" class="flex-1 sm:flex-initial" [variant]="amountMode() === 'signed' ? 'default' : 'outline'" (click)="amountMode.set('signed')">
+        <div hlmButtonGroup class="mb-3 w-full md:w-auto">
+          <button hlmBtn type="button" size="sm" class="flex-1 md:flex-initial" [variant]="amountMode() === 'signed' ? 'default' : 'outline'" (click)="amountMode.set('signed')">
             Colonna singola (con segno)
           </button>
-          <button hlmBtn type="button" size="sm" class="flex-1 sm:flex-initial" [variant]="amountMode() === 'debitCredit' ? 'default' : 'outline'" (click)="amountMode.set('debitCredit')">
+          <button hlmBtn type="button" size="sm" class="flex-1 md:flex-initial" [variant]="amountMode() === 'debitCredit' ? 'default' : 'outline'" (click)="amountMode.set('debitCredit')">
             Due colonne (Uscita/Entrata)
           </button>
         </div>
 
         @if (amountMode() === 'signed') {
           <div hlmSelect [value]="amountColumnValue()" (valueChange)="amountColumn.set(toColumnIndex($event))" [itemToString]="columnLabelFor">
-            <hlm-select-trigger buttonId="map-amount" class="w-full sm:w-64">
+            <hlm-select-trigger buttonId="map-amount" class="w-full md:w-64">
               <span hlmSelectValue placeholder="Scegli colonna"></span>
             </hlm-select-trigger>
             <hlm-select-content *hlmSelectPortal>
@@ -100,7 +100,7 @@
             </hlm-select-content>
           </div>
         } @else {
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label hlmLabel for="map-debit" class="font-normal text-muted-foreground">Uscita (Dare)</label>
               <div hlmSelect [value]="debitColumnValue()" (valueChange)="debitColumn.set(toColumnIndex($event))" [itemToString]="columnLabelFor">
@@ -169,7 +169,8 @@
         <p class="mb-4 rounded-md border border-border bg-muted p-3 text-sm" role="alert">{{ balanceWarning() }}</p>
       }
 
-      <div hlmTableContainer class="max-h-112 rounded-md border border-border">
+      <!-- Tabella: solo desktop, oltre md le colonne non ci stanno su schermo stretto -->
+      <div hlmTableContainer class="hidden max-h-112 rounded-md border border-border md:block">
         <table hlmTable>
           <thead hlmTHead>
             <tr hlmTr>
@@ -240,6 +241,59 @@
             }
           </tbody>
         </table>
+      </div>
+
+      <!-- Card: solo mobile, una per riga invece della tabella orizzontale -->
+      <div class="flex flex-col gap-3 md:hidden">
+        @for (row of previewRows(); track row.rowIndex) {
+          <div hlmCard class="p-3" [class.opacity-60]="!isRowUsable(row)">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <hlm-checkbox [checked]="row.selected" [disabled]="!isRowUsable(row)" (checkedChange)="toggleRowSelected(row)" />
+                <span class="figure text-sm text-muted-foreground">{{ row.date ? (row.date | date: 'dd/MM/yyyy') : '—' }}</span>
+              </div>
+              <span class="figure font-semibold" [class.text-income]="row.type === 'income'" [class.text-expense]="row.type === 'expense'">
+                @if (row.amount !== null) {
+                  {{ row.type === 'income' ? '+' : '−' }}{{ fmt(row.amount) }}
+                } @else {
+                  —
+                }
+              </span>
+            </div>
+            <p class="mt-1.5 text-sm">{{ row.description || '—' }}</p>
+            @if (!isRowUsable(row)) {
+              <span hlmBadge variant="destructive" class="mt-1.5">Non interpretabile</span>
+            } @else if (row.isDuplicateOfExisting || row.isDuplicateInBatch) {
+              <span hlmBadge variant="outline" class="mt-1.5">Duplicato</span>
+            }
+            <div class="mt-2 grid grid-cols-2 gap-2">
+              @if (row.categoryId) {
+                <div hlmSelect [value]="row.categoryId" (valueChange)="onRowCategoryChange(row, $event)" [itemToString]="categoryLabel">
+                  <hlm-select-trigger class="w-full">
+                    <span hlmSelectValue></span>
+                  </hlm-select-trigger>
+                  <hlm-select-content *hlmSelectPortal>
+                    @for (cat of categoryOptions(row); track cat.id) {
+                      <hlm-select-item [value]="cat.id">{{ cat.name }}</hlm-select-item>
+                    }
+                  </hlm-select-content>
+                </div>
+              }
+              @if (row.categoryId && subOptions(row).length > 0) {
+                <div hlmSelect [value]="row.subcategoryId" (valueChange)="onRowSubChange(row, $event)" [itemToString]="subcategoryLabelFor(row)">
+                  <hlm-select-trigger class="w-full">
+                    <span hlmSelectValue placeholder="—"></span>
+                  </hlm-select-trigger>
+                  <hlm-select-content *hlmSelectPortal>
+                    @for (sub of subOptions(row); track sub.id) {
+                      <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
+                    }
+                  </hlm-select-content>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </div>
 
       <div class="mt-6 flex justify-between gap-2">

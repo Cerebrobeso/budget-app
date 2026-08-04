@@ -69,7 +69,7 @@
 			</p>
 		</hlm-dialog-header>
 		<input (ngModelChange)="confirmText.set($event)" [ngModel]="confirmText()" hlmInput placeholder="ELIMINA"
-		       type="text"/>
+		       type="text" aria-label="Scrivi ELIMINA per confermare"/>
 		<hlm-dialog-footer>
 			<button (click)="resetDeleteFlow()" hlmBtn hlmDialogClose variant="outline">Annulla</button>
 			<button (click)="proceedToPassword()" [disabled]="confirmText().trim().toUpperCase() !== 'ELIMINA'" hlmBtn
@@ -93,6 +93,7 @@
 						[ngModel]="password()"
 						hlmInput
 						placeholder="Password"
+						aria-label="Password"
 						type="password"
 		/>
 		@if (deleteError()) {
