@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, resource, signal, viewChild } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, linkedSignal, resource, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
@@ -81,6 +81,11 @@ export class LogPage {
 
   private readonly editDialog = viewChild.required<HlmDialog>('editDialog');
   private readonly deleteDialog = viewChild.required<HlmDialog>('deleteDialog');
+  private readonly monthSentinel = viewChild<ElementRef<HTMLElement>>('monthSentinel');
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Vero quando il timbro del mese è scrollato fuori vista: mostra la versione ridotta sticky (mobile). */
+  readonly compact = signal(false);
 
   readonly monthStamp = computed(() => monthShortLabel(this.month()));
   readonly monthLong = computed(() => monthLongLabel(this.month()));
@@ -181,6 +186,14 @@ export class LogPage {
       this.month.set(this.now.getMonth() + 1)
     }
     this.syncQueryParams(this.year(), this.month());
+
+    afterNextRender(() => {
+      const el = this.monthSentinel()?.nativeElement;
+      if (!el) return;
+      const observer = new IntersectionObserver(([entry]) => this.compact.set(!entry.isIntersecting));
+      observer.observe(el);
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    });
   }
 
   shiftMonth(delta: number): void {

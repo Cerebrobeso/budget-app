@@ -1,5 +1,26 @@
 <h1 class="sr-only">Movimenti</h1>
 
+<div #monthSentinel></div>
+
+<!-- Versione ridotta sticky del timbro del mese, mostrata su mobile mentre si scrolla -->
+@if (compact()) {
+  <div class="sticky top-0 z-30 -mx-4 flex items-center justify-between gap-2 border-b border-border
+              bg-background/95 px-4 py-2 backdrop-blur md:hidden">
+    <button hlmBtn variant="ghost" size="icon" class="size-8" aria-label="Mese precedente" (click)="shiftMonth(-1)">
+      <ng-icon name="lucideChevronLeft" size="16" />
+    </button>
+    <div class="flex items-center gap-2 text-sm font-semibold">
+      <span>{{ monthStamp() }} {{ year() }}</span>
+      <span class="figure" [class.text-income]="balance() >= 0" [class.text-expense]="balance() < 0">
+        {{ fmtSigned(balance()) }}
+      </span>
+    </div>
+    <button hlmBtn variant="ghost" size="icon" class="size-8" aria-label="Mese successivo" (click)="shiftMonth(1)">
+      <ng-icon name="lucideChevronRight" size="16" />
+    </button>
+  </div>
+}
+
 <!-- Timbro del mese: il saldo come split di gara -->
 <section hlmCard class="mt-6 mb-4 overflow-hidden" style="--card-spacing: 0;">
 	<div class="flex items-center justify-center w-full">
