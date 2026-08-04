@@ -441,6 +441,15 @@ export class RecurringStore {
     );
   }
 
+  update(id: string, patch: Partial<Omit<RecurringRule, 'id'>>): void {
+    const current = this.byId(id);
+    if (!current) return;
+    this.rules.update((list) => list.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    this.repo.updateRecurringRule(id, patch).catch((err) =>
+      reportWriteFailure(err, () => this.rules.update((list) => list.map((r) => (r.id === id ? current : r)))),
+    );
+  }
+
   remove(id: string): void {
     const removed = this.byId(id);
     this.rules.update((list) => list.filter((r) => r.id !== id));

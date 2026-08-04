@@ -58,7 +58,17 @@ class FakeCategoryStore {
 class FakeRecurringStore {
   readonly rules = signal<RecurringRule[]>([]);
   add = vi.fn();
+  update = vi.fn();
   installmentProgress = vi.fn((_rule: RecurringRule): { index: number; total: number } | null => null);
+}
+
+/** formCard è un viewChild.required, si risolve solo dopo un detectChanges reale: lo stubbiamo
+ *  via bracket-notation per evitare che startEdit lanci leggendolo senza render (scrollIntoView
+ *  non è responsabilità di questa suite). */
+function stubFormCard(page: RecurringPage) {
+  const formCard = { nativeElement: { scrollIntoView: vi.fn() } };
+  (page as unknown as Record<string, unknown>)['formCard'] = () => formCard;
+  return formCard;
 }
 
 describe('RecurringPage', () => {
@@ -270,7 +280,7 @@ describe('RecurringPage', () => {
     });
   });
 
-  describe('add', () => {
+  describe('save (add mode)', () => {
     it.each([
       ['type is null', { type: null, amountText: '50,00', categoryId: 'exp1' }],
       ['amount parses to 0 (falsy)', { type: 'expense' as TransactionType, amountText: '0', categoryId: 'exp1' }],
@@ -281,7 +291,7 @@ describe('RecurringPage', () => {
       page.amountText.set(setup.amountText);
       page.categoryId.set(setup.categoryId);
 
-      page.add();
+      page.save();
 
       expect(store.add).not.toHaveBeenCalled();
     });
@@ -295,7 +305,7 @@ describe('RecurringPage', () => {
       page.dayOfMonth.set(31);
       page.startDate.set('2026-05-01');
 
-      page.add();
+      page.save();
 
       expect(store.add).toHaveBeenCalledWith({
         type: 'expense',
@@ -314,7 +324,7 @@ describe('RecurringPage', () => {
       page.categoryId.set('exp1');
       page.dayOfMonth.set(0);
 
-      page.add();
+      page.save();
 
       expect(store.add).toHaveBeenCalledWith(expect.objectContaining({ dayOfMonth: 1 }));
     });
@@ -326,7 +336,7 @@ describe('RecurringPage', () => {
       page.startOccurrenceText.set('2');
       page.totalOccurrencesText.set('5');
 
-      page.add();
+      page.save();
 
       expect(store.add).toHaveBeenCalledWith(expect.objectContaining({ startOccurrence: 2, totalOccurrences: 5 }));
     });
@@ -338,7 +348,7 @@ describe('RecurringPage', () => {
       page.startOccurrenceText.set('5');
       page.totalOccurrencesText.set('5');
 
-      page.add();
+      page.save();
 
       expect(store.add).toHaveBeenCalledWith(expect.objectContaining({ startOccurrence: 5, totalOccurrences: 5 }));
     });
@@ -355,7 +365,7 @@ describe('RecurringPage', () => {
       page.startOccurrenceText.set(startText);
       page.totalOccurrencesText.set(totalText);
 
-      page.add();
+      page.save();
 
       const payload = store.add.mock.calls[0][0] as Record<string, unknown>;
       expect(payload).not.toHaveProperty('startOccurrence');
@@ -373,7 +383,7 @@ describe('RecurringPage', () => {
       page.startOccurrenceText.set('2');
       page.totalOccurrencesText.set('5');
 
-      page.add();
+      page.save();
 
       expect(page.type()).toBeNull();
       expect(page.amountText()).toBe('');
@@ -384,6 +394,88 @@ describe('RecurringPage', () => {
       expect(page.startDate()).toBe(todayIso());
       expect(page.startOccurrenceText()).toBe('');
       expect(page.totalOccurrencesText()).toBe('');
+    });
+  });
+
+  describe('startEdit / save (edit mode)', () => {
+    it('startEdit populates the form fields from the given rule and sets editing()', () => {
+      stubFormCard(page);
+      const rule = makeRule({
+        id: 'rule-2',
+        type: 'expense',
+        amount: 1234.5,
+        categoryId: 'exp1',
+        subcategoryId: 'exp1-sub1',
+        description: 'Affitto',
+        dayOfMonth: 5,
+        startDate: '2026-02-01',
+        startOccurrence: 2,
+        totalOccurrences: 10,
+      });
+
+      page.startEdit(rule);
+
+      expect(page.editing()).toBe(rule);
+      expect(page.type()).toBe('expense');
+      expect(page.amountText()).toBe('1.234,5');
+      expect(page.categoryId()).toBe('exp1');
+      expect(page.subcategoryId()).toBe('exp1-sub1');
+      expect(page.description()).toBe('Affitto');
+      expect(page.dayOfMonth()).toBe(5);
+      expect(page.startDate()).toBe('2026-02-01');
+      expect(page.startOccurrenceText()).toBe('2');
+      expect(page.totalOccurrencesText()).toBe('10');
+    });
+
+    it('save calls store.update with the edited rule id and payload, not store.add', () => {
+      stubFormCard(page);
+      const rule = makeRule({ id: 'rule-2' });
+      page.startEdit(rule);
+      page.amountText.set('99,00');
+      page.description.set('Nuova descrizione');
+
+      page.save();
+
+      expect(store.update).toHaveBeenCalledWith(
+        'rule-2',
+        expect.objectContaining({ amount: 99, description: 'Nuova descrizione' }),
+      );
+      expect(store.add).not.toHaveBeenCalled();
+    });
+
+    it('save sends startOccurrence/totalOccurrences as null (not omitted) when clearing an installment plan', () => {
+      stubFormCard(page);
+      const rule = makeRule({ id: 'rule-2', startOccurrence: 1, totalOccurrences: 5 });
+      page.startEdit(rule);
+      page.startOccurrenceText.set('');
+      page.totalOccurrencesText.set('');
+
+      page.save();
+
+      expect(store.update).toHaveBeenCalledWith(
+        'rule-2',
+        expect.objectContaining({ startOccurrence: null, totalOccurrences: null }),
+      );
+    });
+
+    it('cancelEdit clears editing() and resets the form to add-mode defaults', () => {
+      stubFormCard(page);
+      page.startEdit(makeRule({ id: 'rule-2', description: 'Affitto' }));
+
+      page.cancelEdit();
+
+      expect(page.editing()).toBeNull();
+      expect(page.type()).toBeNull();
+      expect(page.description()).toBe('');
+    });
+
+    it('save exits edit mode after a successful update', () => {
+      stubFormCard(page);
+      page.startEdit(makeRule({ id: 'rule-2' }));
+
+      page.save();
+
+      expect(page.editing()).toBeNull();
     });
   });
 });

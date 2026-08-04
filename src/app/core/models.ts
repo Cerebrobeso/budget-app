@@ -60,8 +60,8 @@ export interface RecurringRule {
    * si mette in pausa da sola. `startOccurrence` è la rata da cui riparte questa regola —
    * utile se le rate precedenti sono già registrate a mano (es. un finanziamento a metà).
    */
-  startOccurrence?: number;
-  totalOccurrences?: number;
+  startOccurrence?: number | null;
+  totalOccurrences?: number | null;
 }
 
 export interface Subcategory {

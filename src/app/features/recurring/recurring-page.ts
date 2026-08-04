@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MaskitoDirective } from '@maskito/angular';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePlay, lucidePause, lucideTrash2 } from '@ng-icons/lucide';
+import { lucidePlay, lucidePause, lucidePencil, lucideTrash2 } from '@ng-icons/lucide';
 import { RecurringRule, TransactionType, todayIso } from '../../core/models';
 import { CategoryStore, RecurringStore } from '../../core/stores';
 import {
@@ -11,6 +11,7 @@ import {
   eur,
   isoToDate,
   parseAmountMask,
+  stringifyAmountMask,
 } from '../../core/format';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
@@ -40,7 +41,7 @@ import { toast } from '@spartan-ng/brain/sonner';
     ...HlmTabsImports,
     ...HlmTooltipImports,
   ],
-  providers: [provideIcons({ lucidePlay, lucidePause, lucideTrash2 })],
+  providers: [provideIcons({ lucidePlay, lucidePause, lucidePencil, lucideTrash2 })],
   templateUrl: './recurring-page.html',
   styleUrl: './recurring-page.css',
 })
@@ -53,6 +54,10 @@ export class RecurringPage {
 
   readonly deleting = signal<RecurringRule | null>(null);
   private readonly deleteDialog = viewChild.required<HlmDialog>('deleteDialog');
+  private readonly formCard = viewChild.required<ElementRef<HTMLElement>>('formCard');
+
+  /** Regola in modifica: riusa il form di aggiunta, null per nuovo inserimento. */
+  readonly editing = signal<RecurringRule | null>(null);
 
   readonly type = signal<TransactionType | null>(null);
   readonly amountText = signal('');
@@ -159,7 +164,34 @@ export class RecurringPage {
     });
   }
 
-  add(): void {
+  startEdit(rule: RecurringRule): void {
+    this.editing.set(rule);
+    this.type.set(rule.type);
+    this.amountText.set(stringifyAmountMask(rule.amount));
+    this.categoryId.set(rule.categoryId);
+    this.subcategoryId.set(rule.subcategoryId);
+    this.description.set(rule.description);
+    this.dayOfMonth.set(rule.dayOfMonth);
+    this.startDate.set(rule.startDate);
+    this.startOccurrenceText.set(rule.startOccurrence ? String(rule.startOccurrence) : '');
+    this.totalOccurrencesText.set(rule.totalOccurrences ? String(rule.totalOccurrences) : '');
+    this.formCard().nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  cancelEdit(): void {
+    this.editing.set(null);
+    this.type.set(null);
+    this.amountText.set('');
+    this.categoryId.set('');
+    this.subcategoryId.set(null);
+    this.description.set('');
+    this.dayOfMonth.set(1);
+    this.startDate.set(todayIso());
+    this.startOccurrenceText.set('');
+    this.totalOccurrencesText.set('');
+  }
+
+  save(): void {
     const type = this.type();
     const amount = parseAmountMask(this.amountText());
     if (!type || !amount || amount <= 0 || !this.categoryId()) return;
@@ -170,7 +202,7 @@ export class RecurringPage {
       Number.isFinite(startOccurrence) && startOccurrence > 0 &&
       Number.isFinite(totalOccurrences) && totalOccurrences >= startOccurrence;
 
-    this.store.add({
+    const base = {
       type,
       amount: Math.round(amount * 100) / 100,
       categoryId: this.categoryId(),
@@ -178,16 +210,23 @@ export class RecurringPage {
       description: this.description().trim(),
       dayOfMonth: Math.min(28, Math.max(1, Math.round(this.dayOfMonth()))),
       startDate: this.startDate(),
-      ...(isInstallment ? { startOccurrence, totalOccurrences } : {}),
-    });
-    this.type.set(null);
-    this.amountText.set('');
-    this.categoryId.set('');
-    this.subcategoryId.set(null);
-    this.description.set('');
-    this.dayOfMonth.set(1);
-    this.startDate.set(todayIso());
-    this.startOccurrenceText.set('');
-    this.totalOccurrencesText.set('');
+    };
+
+    const editing = this.editing();
+    if (editing) {
+      // null (non undefined) per far arrivare la rimozione del piano a rate anche al backend:
+      // la patch Supabase ignora le chiavi undefined, quindi solo null forza la cancellazione.
+      this.store.update(editing.id, {
+        ...base,
+        startOccurrence: isInstallment ? startOccurrence : null,
+        totalOccurrences: isInstallment ? totalOccurrences : null,
+      });
+    } else {
+      this.store.add({
+        ...base,
+        ...(isInstallment ? { startOccurrence, totalOccurrences } : {}),
+      });
+    }
+    this.cancelEdit();
   }
 }
