@@ -62,6 +62,11 @@ jobs:
       - name: Build
         run: npx ng build --base-href "/${{ github.event.repository.name }}/"
 
+      # npm run build lo farebbe scattare da solo (hook postbuild), ma qui chiamiamo
+      # ng build direttamente per passare --base-href: va invocato a mano.
+      - name: Versione nel service worker
+        run: node scripts/set-sw-version.mjs
+
       # SPA su Pages: copia index.html in 404.html così le route lato client
       # non danno 404 al refresh o all'accesso diretto.
       - name: Fallback SPA (404.html)

@@ -1,5 +1,6 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideEchartsCore } from 'ngx-echarts';
 import { provideHlmDatePickerConfig } from '@spartan-ng/helm/date-picker';
 import { routes } from './app.routes';
@@ -18,6 +19,10 @@ export const appConfig: ApplicationConfig = {
       formatInputDate: formatDateItalian,
       parseDate: parseDateItalian,
       autoCloseOnSelect: true,
+    }),
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
     }),
   ],
 };

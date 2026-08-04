@@ -10,6 +10,8 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { filter } from 'rxjs';
 import { HlmDialog } from '@spartan-ng/helm/dialog';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -27,6 +29,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmSpinner } from '@spartan-ng/helm/spinner';
 import { HlmToasterImports } from '@spartan-ng/helm/sonner';
+import { toast } from '@spartan-ng/brain/sonner';
 import { TransactionForm } from './features/log/transaction-form';
 
 @Component({
@@ -65,7 +68,11 @@ export class App {
   private readonly portfolioStore = inject(PortfolioStore);
   private readonly recurringStore = inject(RecurringStore);
   private readonly router = inject(Router);
+  private readonly swUpdate = inject(SwUpdate);
   private readonly quickAdd = viewChild.required<HlmDialog>('quickAdd');
+
+  /** Vero finché non arriva l'evento 'offline': aggiornato dagli HostListener sotto. */
+  protected readonly online = signal(navigator.onLine);
 
   /** Vero quando tutti gli store dati hanno completato il caricamento iniziale dal repository. */
   protected readonly dataReady = computed(
@@ -101,6 +108,32 @@ export class App {
         void this.router.navigateByUrl('/login');
       }
     });
+
+    this.swUpdate.versionUpdates
+      .pipe(
+        filter((event): event is VersionReadyEvent => event.type === 'VERSION_READY'),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => {
+        const version = (event.latestVersion.appData as { version?: string } | undefined)?.version;
+        toast.info(version ? `Nuova versione disponibile (v${version})` : 'Nuova versione disponibile', {
+          duration: Infinity,
+          action: {
+            label: 'Aggiorna',
+            onClick: () => void this.swUpdate.activateUpdate().then(() => location.reload()),
+          },
+        });
+      });
+  }
+
+  @HostListener('window:online')
+  onOnline(): void {
+    this.online.set(true);
+  }
+
+  @HostListener('window:offline')
+  onOffline(): void {
+    this.online.set(false);
   }
 
   onRouteActivate(): void {

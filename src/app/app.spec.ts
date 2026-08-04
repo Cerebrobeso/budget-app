@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router } from '@angular/router';
+import { SwUpdate } from '@angular/service-worker';
 import { Subject } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from './app';
@@ -23,6 +24,10 @@ function fakeAuth(user: { id: string } | null = { id: 'u1' }, ready = true) {
   return { user: signal(user), ready: signal(ready) };
 }
 
+function fakeSwUpdate() {
+  return { versionUpdates: new Subject<unknown>(), activateUpdate: vi.fn().mockResolvedValue(true) };
+}
+
 interface SetupOptions {
   categoryReady?: boolean;
   transactionReady?: boolean;
@@ -41,6 +46,7 @@ function setup(opts: SetupOptions = {}) {
   const portfolioStore = fakeStore(opts.portfolioReady ?? true);
   const recurringStore = fakeStore(opts.recurringReady ?? true);
   const theme = { dark: signal(false), toggle: vi.fn() };
+  const swUpdate = fakeSwUpdate();
 
   TestBed.configureTestingModule({
     providers: [
@@ -52,11 +58,12 @@ function setup(opts: SetupOptions = {}) {
       { provide: PortfolioStore, useValue: portfolioStore },
       { provide: RecurringStore, useValue: recurringStore },
       { provide: ThemeService, useValue: theme },
+      { provide: SwUpdate, useValue: swUpdate },
     ],
   });
 
   const component = TestBed.inject(App);
-  return { component, router, auth, categoryStore, transactionStore, portfolioStore, recurringStore, theme };
+  return { component, router, auth, categoryStore, transactionStore, portfolioStore, recurringStore, theme, swUpdate };
 }
 
 function keydown(
@@ -140,6 +147,26 @@ describe('App', () => {
       router.events.next(new NavigationError(1, '/dashboard', new Error('boom')));
 
       expect(component['navigating']()).toBe(false);
+    });
+  });
+
+  describe('online signal (online/offline HostListener)', () => {
+    it('becomes false on onOffline', () => {
+      const { component } = setup();
+      expect(component['online']()).toBe(true);
+
+      component.onOffline();
+
+      expect(component['online']()).toBe(false);
+    });
+
+    it('becomes true again on onOnline', () => {
+      const { component } = setup();
+      component.onOffline();
+
+      component.onOnline();
+
+      expect(component['online']()).toBe(true);
     });
   });
 
