@@ -234,8 +234,8 @@ export class DashboardPage {
       legend: { bottom: 0, textStyle: { color: c.text } },
       series: [{
         type: 'pie',
-        radius: ['42%', '75%'],
-        center: ['50%', '44%'],
+        radius: ['36%', '64%'],
+        center: ['50%', '38%'],
         itemStyle: { borderRadius: 6, borderWidth: 2, borderColor: 'transparent' },
         label: {
           position: 'inside',
