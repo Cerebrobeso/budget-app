@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.9.1](https://github.com/Cerebrobeso/budget-app/compare/v1.9.0...v1.9.1) (2026-08-20)
+
+### Bug Fixes
+
+* **dashboard:** distanzia la legenda dal grafico a torta ([488f465](https://github.com/Cerebrobeso/budget-app/commit/488f46517bead66ce2488c7e2aa5de99486bdf5f))
 ## [1.9.0](https://github.com/Cerebrobeso/budget-app/compare/v1.8.0...v1.9.0) (2026-08-04)
 
 ### Features
