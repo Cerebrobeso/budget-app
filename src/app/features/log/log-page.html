@@ -5,7 +5,8 @@
 <!-- Versione ridotta sticky del timbro del mese, mostrata su mobile mentre si scrolla -->
 @if (compact()) {
   <div class="sticky top-0 z-30 -mx-4 flex items-center justify-between gap-2 border-b border-border
-              bg-background/95 px-4 py-2 backdrop-blur md:hidden">
+              bg-background/95 px-4 py-2 backdrop-blur md:hidden
+              animate-in fade-in duration-200 ease-out">
     <button hlmBtn variant="ghost" size="icon" class="size-8" aria-label="Mese precedente" (click)="shiftMonth(-1)">
       <ng-icon name="lucideChevronLeft" size="16" />
     </button>
@@ -88,7 +89,7 @@
   <div class="relative w-full ">
     <ng-icon name="lucideSearch" size="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
     <label hlmLabel class="sr-only" for="search">Cerca movimenti</label>
-    <input hlmInput id="search" type="text" placeholder="Cerca per descrizione, in tutti i mesi…"
+    <input hlmInput id="search" type="text" placeholder="Cerca per descrizione…"
            class="pl-9" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     @if (search()) {
       <button hlmBtn variant="ghost" size="icon" class="absolute right-1 top-1/2 size-11 -translate-y-1/2 md:size-7"
@@ -202,7 +203,7 @@
                  [class.text-income]="tx.type === 'income'" [class.text-expense]="tx.type === 'expense'">
               {{ tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : '' }}{{ fmt(tx.amount) }}
             </div>
-            <div class="flex basis-full items-center justify-end gap-1 md:basis-auto md:w-auto md:shrink-0">
+            <div class="flex basis-full items-center justify-end gap-2 md:basis-auto md:w-auto md:shrink-0 md:gap-1">
               <button hlmBtn variant="ghost" size="sm"
                       [class.text-expense]="tx.tag === 'unexpected'" [class.text-primary]="tx.tag === 'planned'"
                       [class.text-muted-foreground]="!tx.tag"
@@ -214,14 +215,14 @@
                          size="16" class="mr-1" />
                 {{ tagLabel(tx.tag) }}
               </button>
-              <button hlmBtn variant="ghost" size="icon" class="size-11 md:size-8"
+              <button hlmBtn variant="outline" size="sm" class="text-primary"
                       [attr.aria-label]="'Modifica ' + (tx.description || 'movimento')"
                       hlmTooltip="Modifica"
-                      (click)="startEdit(tx)"><ng-icon name="lucidePencil" size="16" /></button>
-              <button hlmBtn variant="ghost" size="icon" class="size-11 text-expense md:size-8"
+                      (click)="startEdit(tx)"><ng-icon name="lucidePencil" size="16" class="mr-1" />Modifica</button>
+              <button hlmBtn variant="outline" size="sm" class="text-expense"
                       [attr.aria-label]="'Elimina ' + (tx.description || 'movimento')"
                       hlmTooltip="Elimina"
-                      (click)="askDelete(tx)"><ng-icon name="lucideTrash2" size="16" /></button>
+                      (click)="askDelete(tx)"><ng-icon name="lucideTrash2" size="16" class="mr-1" />Elimina</button>
             </div>
           </div>
         }

@@ -230,40 +230,39 @@
           {{ rule.type === 'income' ? '+' : '−' }}{{ fmt(rule.amount) }}
         </div>
         <div
-          class="flex basis-full items-center justify-end gap-1 md:basis-auto md:w-auto md:shrink-0"
+          class="flex basis-full items-center justify-end gap-2 md:basis-auto md:w-auto md:shrink-0 md:gap-1"
         >
           <button
             hlmBtn
-            variant="ghost"
-            size="icon"
-            class="size-11 md:size-8"
-            aria-label="Modifica regola"
-            hlmTooltip="Modifica"
-            (click)="startEdit(rule)"
-          >
-            <ng-icon name="lucidePencil" size="16" />
-          </button>
-          <button
-            hlmBtn
-            variant="ghost"
-            size="icon"
-            class="size-11 md:size-8"
+            variant="outline"
+            size="sm"
             aria-label="Metti in pausa"
             hlmTooltip="Metti in pausa"
             (click)="pause(rule)"
           >
-            <ng-icon name="lucidePause" size="16" />
+            <ng-icon name="lucidePause" size="16" class="mr-1" />Pausa
           </button>
           <button
             hlmBtn
-            variant="ghost"
-            size="icon"
-            class="size-11 text-expense md:size-8"
+            variant="outline"
+            size="sm"
+            class="text-primary"
+            aria-label="Modifica regola"
+            hlmTooltip="Modifica"
+            (click)="startEdit(rule)"
+          >
+            <ng-icon name="lucidePencil" size="16" class="mr-1" />Modifica
+          </button>
+          <button
+            hlmBtn
+            variant="outline"
+            size="sm"
+            class="text-expense ms-1 md:ms-0"
             aria-label="Elimina regola"
             hlmTooltip="Elimina regola"
             (click)="askDelete(rule)"
           >
-            <ng-icon name="lucideTrash2" size="16" />
+            <ng-icon name="lucideTrash2" size="16" class="mr-1" />Elimina
           </button>
         </div>
       </div>
@@ -299,40 +298,39 @@
           </div>
         </div>
         <div
-          class="flex basis-full items-center justify-end gap-1 md:basis-auto md:w-auto md:shrink-0"
+          class="flex basis-full items-center justify-end gap-2 md:basis-auto md:w-auto md:shrink-0 md:gap-1"
         >
           <button
             hlmBtn
-            variant="ghost"
-            size="icon"
-            class="size-11 md:size-8"
-            aria-label="Modifica regola"
-            hlmTooltip="Modifica"
-            (click)="startEdit(rule)"
-          >
-            <ng-icon name="lucidePencil" size="16" />
-          </button>
-          <button
-            hlmBtn
-            variant="ghost"
-            size="icon"
-            class="size-11 md:size-8"
+            variant="outline"
+            size="sm"
             aria-label="Riattiva"
             hlmTooltip="Riattiva"
             (click)="reactivate(rule)"
           >
-            <ng-icon name="lucidePlay" size="16" />
+            <ng-icon name="lucidePlay" size="16" class="mr-1" />Riattiva
           </button>
           <button
             hlmBtn
-            variant="ghost"
-            size="icon"
-            class="size-11 text-expense md:size-8"
+            variant="outline"
+            size="sm"
+            class="text-primary"
+            aria-label="Modifica regola"
+            hlmTooltip="Modifica"
+            (click)="startEdit(rule)"
+          >
+            <ng-icon name="lucidePencil" size="16" class="mr-1" />Modifica
+          </button>
+          <button
+            hlmBtn
+            variant="outline"
+            size="sm"
+            class="text-expense ms-1 md:ms-0"
             aria-label="Elimina regola"
             hlmTooltip="Elimina regola"
             (click)="askDelete(rule)"
           >
-            <ng-icon name="lucideTrash2" size="16" />
+            <ng-icon name="lucideTrash2" size="16" class="mr-1" />Elimina
           </button>
         </div>
       </div>
