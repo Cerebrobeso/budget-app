@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.10.0](https://github.com/Cerebrobeso/budget-app/compare/v1.9.1...v1.10.0) (2026-08-21)
+
+### Bug Fixes
+
+* **mobile:** ottimizza touch target e safe area su iOS standalone ([d804aac](https://github.com/Cerebrobeso/budget-app/commit/d804aac47b808a5066600354aa8d51cb5310d396))
 ## [1.9.1](https://github.com/Cerebrobeso/budget-app/compare/v1.9.0...v1.9.1) (2026-08-20)
 
 ### Bug Fixes
