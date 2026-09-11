@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import type { User } from '@supabase/supabase-js';
 import { AuthService } from './auth.service';
 import { Transaction, uid } from './models';
+import { toast } from '@spartan-ng/brain/sonner';
 import { BUDGET_REPOSITORY, TransactionQuery } from './repository';
 import { reportWriteFailure } from './write-failure';
 
@@ -11,6 +12,12 @@ export class TransactionStore {
   private readonly auth = inject(AuthService);
   readonly transactions = signal<Transaction[]>([]);
   readonly ready = signal(false);
+  /**
+   * Vero se l'ultimo caricamento è fallito. `transactions()` resta vuoto anche in questo caso,
+   * quindi senza questo flag un errore di rete è indistinguibile da "nessun movimento": chi ne
+   * deriva delle scritture (la generazione dei ricorrenti) creerebbe duplicati.
+   */
+  readonly loadFailed = signal(false);
 
   /** Scatta quando una scrittura si è conclusa (successo o rollback): chi legge dal backend
    * può rileggere senza correre contro l'update ottimistico ancora in volo. */
@@ -40,7 +47,15 @@ export class TransactionStore {
       return;
     }
     const stored = await this.repo.loadTransactions();
-    this.transactions.set(stored ?? []);
+    if (!stored) {
+      this.loadFailed.set(true);
+      this.transactions.set([]);
+      this.ready.set(true);
+      toast.error('Movimenti non caricati. Controlla la connessione e ricarica la pagina.');
+      return;
+    }
+    this.loadFailed.set(false);
+    this.transactions.set(stored);
     this.ready.set(true);
   }
 

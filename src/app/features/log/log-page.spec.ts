@@ -263,15 +263,27 @@ describe('LogPage', () => {
         expect(page.filtered().map((t) => t.id)).toEqual(['tx1']);
       });
 
-      it('keeps the previous result while the next query is in flight', async () => {
+      it('drops the previous month as soon as the query changes, without waiting for the response', async () => {
         const { page } = await setupJune();
-        const before = page.filtered().map((t) => t.id);
+        expect(page.filtered().length).toBeGreaterThan(0);
 
         // Cambio mese senza drenare: la query è ancora in volo.
         page.month.set(7);
         TestBed.flushEffects();
 
+        expect(page.filtered()).toEqual([]);
+        expect(page.loadingNewQuery()).toBe(true);
+      });
+
+      it('keeps the current result while a refetch for the same query is in flight (dopo una scrittura)', async () => {
+        const { page, txStore } = await setupJune();
+        const before = page.filtered().map((t) => t.id);
+
+        txStore.revision.set(txStore.revision() + 1);
+        TestBed.flushEffects();
+
         expect(page.filtered().map((t) => t.id)).toEqual(before);
+        expect(page.loadingNewQuery()).toBe(false);
       });
     });
 
@@ -309,13 +321,14 @@ describe('LogPage', () => {
         expect(page.balance()).toBe(1970);
       });
 
-      it('ignores the tag filter, so the month totals do not change when it is active', async () => {
+      it('follows the tag filter, so the totals match the list on screen', async () => {
         const { page } = await setupJune();
         page.filterTag.set('planned');
         await settle();
 
-        expect(page.totIncome()).toBe(2000);
-        expect(page.totExpense()).toBe(30);
+        // Solo tx5 (uscita da 5) ha l'etichetta 'planned'.
+        expect(page.totIncome()).toBe(0);
+        expect(page.totExpense()).toBe(5);
       });
     });
 

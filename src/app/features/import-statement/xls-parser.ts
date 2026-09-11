@@ -1,6 +1,7 @@
 import { dateToIso } from '../../core/format';
-import { ParsedRows } from './import-types';
-import { buildParsedRows } from './row-utils';
+// Usati solo da parseXls, disattivato in fondo al file.
+// import { ParsedRows } from './import-types';
+// import { buildParsedRows } from './row-utils';
 
 /**
  * Converte una cella del foglio in stringa mantenendo la pipeline a valle invariata.
@@ -30,21 +31,22 @@ export function pickLargestSheetName(sheetNames: string[], sizeOf: (name: string
   return best;
 }
 
-// Import dinamico per non gonfiare il bundle di chi importa solo CSV o PDF.
-export async function parseXls(file: File): Promise<ParsedRows> {
-  const XLSX = await import('xlsx');
-  const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
-
-  const sheetName = pickLargestSheetName(
-    workbook.SheetNames,
-    (name) => Object.keys(workbook.Sheets[name] ?? {}).length,
-  );
-  const sheet = sheetName ? workbook.Sheets[sheetName] : null;
-  if (!sheet) throw new Error('Il foglio di calcolo non contiene dati.');
-
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '', raw: true, blankrows: false });
-  const asText = rows.map((row) => row.map(cellToString)).filter((row) => row.some((cell) => cell !== ''));
-  if (asText.length === 0) throw new Error('Il foglio di calcolo non contiene righe.');
-
-  return buildParsedRows(asText);
-}
+// Disattivato: la dipendenza `xlsx` non è più disponibile. Ripristinare insieme al pacchetto.
+// // Import dinamico per non gonfiare il bundle di chi importa solo CSV o PDF.
+// export async function parseXls(file: File): Promise<ParsedRows> {
+//   const XLSX = await import('xlsx');
+//   const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
+//
+//   const sheetName = pickLargestSheetName(
+//     workbook.SheetNames,
+//     (name) => Object.keys(workbook.Sheets[name] ?? {}).length,
+//   );
+//   const sheet = sheetName ? workbook.Sheets[sheetName] : null;
+//   if (!sheet) throw new Error('Il foglio di calcolo non contiene dati.');
+//
+//   const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '', raw: true, blankrows: false });
+//   const asText = rows.map((row) => row.map(cellToString)).filter((row) => row.some((cell) => cell !== ''));
+//   if (asText.length === 0) throw new Error('Il foglio di calcolo non contiene righe.');
+//
+//   return buildParsedRows(asText);
+// }

@@ -4,6 +4,8 @@
 @import 'tailwindcss/utilities.css';
 
 @import "@spartan-ng/brain/hlm-tailwind-preset.css";
+/* Utility di animazione (animate-in, fade-in, slide-in-from-*) usate nei template. */
+@import "tw-animate-css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

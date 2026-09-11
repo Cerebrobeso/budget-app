@@ -110,9 +110,14 @@ describe('TransactionForm', () => {
   });
 
   describe('availableCategories', () => {
-    it('is empty when no type is selected', () => {
-      expect(component.type()).toBeNull();
+    it('is empty when the type is cleared', () => {
+      component.type.set(null);
       expect(component.availableCategories()).toEqual([]);
+    });
+
+    it('defaults to expense, so the expense categories are available right away', () => {
+      expect(component.type()).toBe('expense');
+      expect(component.availableCategories()).toEqual(expenseCats);
     });
 
     it('returns the income categories when type is income', () => {
@@ -138,9 +143,17 @@ describe('TransactionForm', () => {
       expect(component.categoryId()).toBe('not-a-real-category');
     });
 
+    it('picks the first category of the default type as soon as the categories are loaded', () => {
+      TestBed.flushEffects();
+
+      expect(component.categoryId()).toBe('spesa-quotidiana');
+      expect(component.subcategoryId()).toBe('super');
+    });
+
     it('leaves categoryId alone when it is already valid for the new type', () => {
-      expect(component.categoryId()).toBe('spesa-quotidiana'); // default value
-      expect(component.subcategoryId()).toBeNull(); // default value
+      component.type.set(null);
+      component.categoryId.set('spesa-quotidiana');
+      component.subcategoryId.set(null);
 
       component.setType('expense');
 
@@ -150,6 +163,7 @@ describe('TransactionForm', () => {
     });
 
     it('resets categoryId (and subcategoryId) to the first available category when the current one is invalid for the new type', () => {
+      TestBed.flushEffects();
       expect(component.categoryId()).toBe('spesa-quotidiana'); // invalid for income
 
       component.setType('income');
@@ -235,10 +249,20 @@ describe('TransactionForm', () => {
     });
 
     it('requires a type to be selected', () => {
+      component.type.set(null);
       component.save();
       expect(component.error()).toBe('Seleziona Entrata, Uscita o Trasferimento.');
       expect(txStore.add).not.toHaveBeenCalled();
       expect(txStore.update).not.toHaveBeenCalled();
+    });
+
+    it('requires a category when the type is not a transfer', () => {
+      component.type.set('expense');
+      component.categoryId.set('');
+      component.amountText.set('10');
+      component.save();
+      expect(component.error()).toBe('Scegli una categoria.');
+      expect(txStore.add).not.toHaveBeenCalled();
     });
 
     it('requires a positive amount when amountText is empty', () => {

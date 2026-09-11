@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MaskitoDirective } from '@maskito/angular';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePlay, lucidePause, lucidePencil, lucideTrash2 } from '@ng-icons/lucide';
+import { lucidePlay, lucidePause, lucidePencil, lucidePlus, lucideTrash2 } from '@ng-icons/lucide';
 import { RecurringRule, TransactionType, todayIso } from '../../core/models';
 import { CategoryStore, RecurringStore } from '../../core/stores';
 import {
@@ -43,7 +43,7 @@ import { toast } from '@spartan-ng/brain/sonner';
     ...HlmTabsImports,
     ...HlmTooltipImports,
   ],
-  providers: [provideIcons({ lucidePlay, lucidePause, lucidePencil, lucideTrash2 })],
+  providers: [provideIcons({ lucidePlay, lucidePause, lucidePencil, lucidePlus, lucideTrash2 })],
   templateUrl: './recurring-page.html',
   styleUrl: './recurring-page.css',
 })
@@ -56,7 +56,12 @@ export class RecurringPage {
 
   readonly deleting = signal<RecurringRule | null>(null);
   private readonly deleteDialog = viewChild.required<HlmDialog>('deleteDialog');
-  private readonly formCard = viewChild.required<ElementRef<HTMLElement>>('formCard');
+  /** Non `required`: il form esiste nel DOM solo quando è aperto. */
+  private readonly formCard = viewChild<ElementRef<HTMLElement>>('formCard');
+  private readonly injector = inject(Injector);
+
+  /** Il form di inserimento è a scomparsa: chiuso, la pagina si apre sull'elenco delle regole. */
+  readonly formOpen = signal(false);
 
   /** Regola in modifica: riusa il form di aggiunta, null per nuovo inserimento. */
   readonly editing = signal<RecurringRule | null>(null);
@@ -166,7 +171,21 @@ export class RecurringPage {
     });
   }
 
+  openForm(): void {
+    this.cancelEdit();
+    this.formOpen.set(true);
+  }
+
+  /** Il form compare in questo istante: lo scroll deve aspettare che sia nel DOM. */
+  private scrollToForm(): void {
+    afterNextRender(
+      () => this.formCard()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      { injector: this.injector },
+    );
+  }
+
   startEdit(rule: RecurringRule): void {
+    this.formOpen.set(true);
     this.editing.set(rule);
     this.type.set(rule.type);
     this.amountText.set(stringifyAmountMask(rule.amount));
@@ -177,10 +196,11 @@ export class RecurringPage {
     this.startDate.set(rule.startDate);
     this.startOccurrenceText.set(rule.startOccurrence ? String(rule.startOccurrence) : '');
     this.totalOccurrencesText.set(rule.totalOccurrences ? String(rule.totalOccurrences) : '');
-    this.formCard().nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.scrollToForm();
   }
 
   cancelEdit(): void {
+    this.formOpen.set(false);
     this.editing.set(null);
     this.type.set(null);
     this.amountText.set('');

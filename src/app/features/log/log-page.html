@@ -24,16 +24,14 @@
 
 <!-- Timbro del mese: il saldo come split di gara -->
 <section hlmCard class="mt-6 mb-4 overflow-hidden" style="--card-spacing: 0;">
-	<div class="flex items-center justify-center w-full">
-	<div class="flex flex-wrap items-center gap-2 md:flex-row min-h-7 mt-3">
-		@if (!isToday()) {
-			<button size="sm" hlmBtn variant="secondary" (click)="resetYearAndMonth()">
-				<ng-icon name="lucideRotateCcw" />
-				Torna ad oggi
-			</button>
-		}
-	</div>
-	</div>
+  @if (!isToday()) {
+    <div class="flex items-center justify-center w-full pt-3 animate-in fade-in zoom-in-95 duration-200">
+      <button size="sm" hlmBtn variant="secondary" (click)="resetYearAndMonth()">
+        <ng-icon name="lucideRotateCcw" />
+        Torna ad oggi
+      </button>
+    </div>
+  }
   <div class="flex items-center justify-between border-b border-border px-4 py-3">
     <button hlmBtn variant="ghost" size="icon" aria-label="Mese precedente" hlmTooltip="Mese precedente" (click)="shiftMonth(-1)">
       <ng-icon name="lucideChevronLeft" />
@@ -161,18 +159,36 @@
 
 <hr class="my-4">
 <!-- Lista movimenti raggruppata per giorno -->
-@if (groups().length === 0 && !txQuery.isLoading()) {
-  <div hlmCard class="p-8 text-center text-muted-foreground">
-    <p>
-      Nessun movimento in questo mese.<br />
-      <span class="hidden md:inline">Premi <kbd class="figure rounded bg-muted px-1.5">N</kbd> o il tasto</span>
-      <span class="md:hidden">Tocca il tasto</span> + per aggiungerne uno.
-    </p>
+@if (loadingNewQuery()) {
+  <!-- Scheletro mentre arriva il mese nuovo: la lista precedente è già sparita. -->
+  <div class="flex flex-col gap-3" aria-hidden="true">
+    @for (row of skeletonRows; track row) {
+      <div hlmCard class="flex items-center gap-3 px-4 py-4 animate-pulse">
+        <div class="size-9 shrink-0 rounded-full bg-muted"></div>
+        <div class="flex-1 space-y-2">
+          <div class="h-3.5 w-1/3 rounded bg-muted"></div>
+          <div class="h-3 w-1/5 rounded bg-muted"></div>
+        </div>
+        <div class="h-4 w-20 rounded bg-muted"></div>
+      </div>
+    }
+  </div>
+} @else if (groups().length === 0) {
+  <div hlmCard class="p-8 text-center text-muted-foreground animate-in fade-in duration-200">
+    @if (searching() || anyFilterActive()) {
+      <p>Nessun movimento corrisponde ai filtri.</p>
+    } @else {
+      <p>
+        Nessun movimento in questo mese.<br />
+        <span class="hidden md:inline">Premi <kbd class="figure rounded bg-muted px-1.5">N</kbd> o il tasto</span>
+        <span class="md:hidden">Tocca il tasto</span> + per aggiungerne uno.
+      </p>
+    }
   </div>
 }
 <div class="flex flex-col gap-6">
   @for (group of groups(); track group.date) {
-    <div>
+    <div class="animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
       <div class="mb-2 px-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
         {{ group.label }}
       </div>

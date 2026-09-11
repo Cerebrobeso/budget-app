@@ -46,7 +46,11 @@ export class AuthService {
     if (Date.now() - this.lastVerifiedAt < REVALIDATE_INTERVAL_MS) return;
     this.lastVerifiedAt = Date.now();
     void supabase.auth.getSession().then(({ data }) => {
-      this.user.set(data.session?.user ?? null);
+      // Stesso guard di onAuthStateChange: `getSession` restituisce un oggetto user nuovo
+      // ogni volta e, senza confronto per id, ogni navigazione farebbe ripartire il reload
+      // completo di tutti gli store (con il rischio di rigenerare i movimenti ricorrenti).
+      const nextUser = data.session?.user ?? null;
+      if (nextUser?.id !== this.user()?.id) this.user.set(nextUser);
     });
   }
 

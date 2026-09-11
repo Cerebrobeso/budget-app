@@ -12,6 +12,22 @@ async function checkWrite(result: PromiseLike<{ error: { message: string } | nul
   if (error) throw new Error(error.message);
 }
 
+/** Il REST di Supabase tronca ogni select a 1000 righe: si pagina finché una pagina torna piena.
+ * Serve un ordinamento deterministico (tiebreaker su id), altrimenti tra una pagina e l'altra
+ * le righe con la stessa data possono ripetersi o sparire. */
+const PAGE_SIZE = 1000;
+async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[] | null> {
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error || !data) return null;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) return all;
+  }
+}
+
 /** `%` e `_` in un testo cercato sono wildcard per ilike: vanno neutralizzati.
  * ponytail: `*` resta un wildcard (PostgREST lo traduce in `%` prima di Postgres e non ha un escape);
  * cercare un `*` letterale ritorna più righe del previsto. Da affrontare solo se serve davvero. */
@@ -201,23 +217,32 @@ function assetPatchToRow(patch: Partial<Omit<Asset, 'id'>>): Record<string, unkn
 @Injectable()
 export class SupabaseBudgetRepository implements BudgetRepository {
   async loadTransactions(): Promise<Transaction[] | null> {
-    const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: true });
-    if (error || !data) return null;
-    return data.map(rowToTx);
+    const rows = await fetchAllPages((from, to) =>
+      supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    );
+    return rows ? rows.map(rowToTx) : null;
   }
   async queryTransactions(query: TransactionQuery, signal?: AbortSignal): Promise<Transaction[] | null> {
-    let request = supabase.from('transactions').select('*');
-    if (query.from) request = request.gte('date', query.from);
-    if (query.before) request = request.lt('date', query.before);
-    if (query.categoryId) request = request.eq('category_id', query.categoryId);
-    if (query.subcategoryId) request = request.eq('subcategory_id', query.subcategoryId);
-    if (query.search) request = request.ilike('description', `%${escapeLike(query.search)}%`);
-    // Tiebreaker su id: senza, l'ordine dei movimenti dello stesso giorno non è deterministico.
-    let ordered = request.order('date', { ascending: false }).order('id', { ascending: true });
-    if (signal) ordered = ordered.abortSignal(signal);
-    const { data, error } = await ordered;
-    if (error || !data) return null;
-    return data.map(rowToTx);
+    // Ricostruita a ogni pagina: un builder Supabase non va riusato per due fetch.
+    const build = (from: number, to: number) => {
+      let request = supabase.from('transactions').select('*');
+      if (query.from) request = request.gte('date', query.from);
+      if (query.before) request = request.lt('date', query.before);
+      if (query.categoryId) request = request.eq('category_id', query.categoryId);
+      if (query.subcategoryId) request = request.eq('subcategory_id', query.subcategoryId);
+      if (query.search) request = request.ilike('description', `%${escapeLike(query.search)}%`);
+      // Tiebreaker su id: senza, l'ordine dei movimenti dello stesso giorno non è deterministico.
+      let ordered = request.order('date', { ascending: false }).order('id', { ascending: true }).range(from, to);
+      if (signal) ordered = ordered.abortSignal(signal);
+      return ordered;
+    };
+    const rows = await fetchAllPages(build);
+    return rows ? rows.map(rowToTx) : null;
   }
   async addTransaction(tx: Transaction): Promise<void> {
     await checkWrite(supabase.from('transactions').insert(txToRow(tx)));

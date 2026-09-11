@@ -21,7 +21,6 @@ import { eurSigned } from '../../core/format';
 import { validateStatementFile, decodeTextFile } from './file-validation';
 import { parseCsv } from './csv-parser';
 import { parsePdf } from './pdf-parser';
-import { parseXls } from './xls-parser';
 import { guessDateFormat, guessFieldMapping, mapRows } from './column-mapping';
 import { BankProfile, matchBankProfile } from './bank-profiles';
 import { checkBalance, extractBalances } from './balance-check';
@@ -135,12 +134,16 @@ export class ImportStatementPage {
         return;
       }
 
+      // `xlsx` non è più disponibile: l'import Excel resta disattivato finché non torna.
+      if (validation.kind === 'xls') {
+        this.fileError.set('Import Excel non disponibile: converti il file in CSV.');
+        return;
+      }
+
       const parsed =
         validation.kind === 'csv'
           ? parseCsv(decodeTextFile(await file.arrayBuffer()))
-          : validation.kind === 'xls'
-            ? await parseXls(file)
-            : await parsePdf(file);
+          : await parsePdf(file);
 
       this.parsedRows.set(parsed);
       const profile = parsed.headers !== null ? matchBankProfile(parsed.columnLabels) : null;

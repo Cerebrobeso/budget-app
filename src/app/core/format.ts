@@ -3,13 +3,29 @@ import { it } from 'date-fns/locale';
 import type { MaskitoOptions } from '@maskito/core';
 import { maskitoNumber, maskitoParseNumber, maskitoStringifyNumber } from '@maskito/kit';
 
-const EUR = new Intl.NumberFormat('it-IT', {
-  style: 'currency',
-  currency: 'EUR',
-});
+/**
+ * `useGrouping: 'always'`: con it-IT il default non raggruppa i numeri di esattamente 4 cifre
+ * (1700 resterebbe "1700,00 €"), mentre la maschera dell'importo li raggruppa — stesso numero
+ * scritto in due modi diversi tra campo e lista. Stessa ragione del pattern in AMOUNT_MASK.
+ */
+const EUR = new Intl.NumberFormat(
+  'it-IT',
+  // `useGrouping: 'always'` è ES2023: i tipi di Intl in uso lo dichiarano ancora solo boolean.
+  { style: 'currency', currency: 'EUR', useGrouping: 'always' } as unknown as Intl.NumberFormatOptions,
+);
 
 export function eur(value: number): string {
   return EUR.format(value);
+}
+
+const DECIMAL = new Intl.NumberFormat(
+  'it-IT',
+  { maximumFractionDigits: 2, useGrouping: 'always' } as unknown as Intl.NumberFormatOptions,
+);
+
+/** Numero in formato italiano senza valuta (etichette degli assi dei grafici). */
+export function decimal(value: number): string {
+  return DECIMAL.format(value);
 }
 
 /** +1.234,56 € / −1.234,56 € con segno esplicito, stile split di gara. */

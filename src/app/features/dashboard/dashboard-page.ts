@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import type { ECElementEvent, EChartsCoreOption } from 'echarts';
 import { CategoryStore, ThemeService, TransactionStore } from '../../core/stores';
-import { dateToIso, eur, formatDateItalian, isoToDate, monthShortLabel } from '../../core/format';
+import { dateToIso, decimal, eur, formatDateItalian, isoToDate, monthShortLabel } from '../../core/format';
 import { todayIso } from '../../core/models';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
@@ -46,12 +46,19 @@ export class DashboardPage {
   readonly customFromDate = computed(() => isoToDate(this.customFrom()));
   readonly customToDate = computed(() => isoToDate(this.customTo()));
 
+  // Un "da" dopo il "a" (o viceversa) darebbe grafici vuoti senza spiegazione: l'altro estremo segue.
   onCustomFromChange(value: Date | null): void {
-    if (value) this.customFrom.set(dateToIso(value));
+    if (!value) return;
+    const iso = dateToIso(value);
+    this.customFrom.set(iso);
+    if (iso > this.customTo()) this.customTo.set(iso);
   }
 
   onCustomToChange(value: Date | null): void {
-    if (value) this.customTo.set(dateToIso(value));
+    if (!value) return;
+    const iso = dateToIso(value);
+    this.customTo.set(iso);
+    if (iso < this.customFrom()) this.customFrom.set(iso);
   }
 
   readonly from = computed(() => {
@@ -135,7 +142,12 @@ export class DashboardPage {
       yAxis: {
         type: 'value' as const,
         splitLine: { lineStyle: { color: c.line } },
-        axisLabel: { color: c.text, fontFamily: 'Spline Sans Mono' },
+        // Senza formatter ECharts scrive "1,200": separatore inglese, in contrasto con il resto dell'app.
+        axisLabel: {
+          color: c.text,
+          fontFamily: 'Spline Sans Mono',
+          formatter: (v: number | string) => decimal(Number(v)),
+        },
       },
     };
   }
@@ -168,13 +180,21 @@ export class DashboardPage {
       if (tx.type !== 'expense') continue;
       totals.set(tx.categoryId, (totals.get(tx.categoryId) ?? 0) + tx.amount);
     }
+    // Due categorie possono avere lo stesso nome: il click in legenda arriva come nome,
+    // quindi va reso univoco o si aprirebbe il dettaglio della categoria sbagliata.
+    const used = new Map<string, number>();
     return [...totals.entries()]
-      .map(([id, value]) => ({
-        id,
-        name: this.catStore.byId(id)?.name ?? id,
-        value: round2(value),
-        itemStyle: { color: this.catStore.color(id) },
-      }))
+      .map(([id, value]) => {
+        const base = this.catStore.byId(id)?.name ?? id;
+        const seen = used.get(base) ?? 0;
+        used.set(base, seen + 1);
+        return {
+          id,
+          name: seen ? `${base} (${seen + 1})` : base,
+          value: round2(value),
+          itemStyle: { color: this.catStore.color(id) },
+        };
+      })
       .sort((a, b) => b.value - a.value);
   });
 

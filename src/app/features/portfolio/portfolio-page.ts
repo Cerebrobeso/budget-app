@@ -7,7 +7,7 @@ import { lucidePlus, lucideTrash2, lucideTriangleAlert, lucideX } from '@ng-icon
 import { isBefore, startOfYear, subMonths } from 'date-fns';
 import { ASSET_CATEGORY_LABEL, Asset, AssetCategory, todayIso } from '../../core/models';
 import { PortfolioStore, ThemeService, latest, returnPct } from '../../core/stores';
-import { dateToIso, eur, formatDateItalian, isoToDate, pct } from '../../core/format';
+import { dateToIso, decimal, eur, formatDateItalian, isoToDate, pct } from '../../core/format';
 import { HlmBadge } from '@spartan-ng/helm/badge';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCard } from '@spartan-ng/helm/card';
@@ -113,7 +113,12 @@ export class PortfolioPage {
         type: 'value',
         scale: true,
         splitLine: { lineStyle: { color: line } },
-        axisLabel: { color: text, fontFamily: 'Spline Sans Mono' },
+        // Senza formatter ECharts scrive "1,700": separatore inglese, in contrasto con il resto dell'app.
+        axisLabel: {
+          color: text,
+          fontFamily: 'Spline Sans Mono',
+          formatter: (v: number | string) => decimal(Number(v)),
+        },
       },
       series: [{
         type: 'line',

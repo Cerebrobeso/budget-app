@@ -89,6 +89,18 @@ export class App {
   /** Alterna tra due classi identiche per far ripartire l'animazione di fade a ogni cambio pagina. */
   protected readonly routeAnimToggle = signal(false);
 
+  private readonly currentUrl = signal(this.router.url);
+
+  /**
+   * Il FAB non compare dove la pagina ha già il suo pulsante di inserimento: essendo fisso in
+   * basso a destra, a metà scroll finirebbe sopra i campi di quelle form senza aggiungere nulla.
+   */
+  protected readonly showFab = computed(
+    () =>
+      !this.categoryStore.isAdmin() &&
+      !['/ricorrenti', '/patrimonio'].some((path) => this.currentUrl().startsWith(path)),
+  );
+
   constructor() {
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationStart) this.navigating.set(true);
@@ -98,6 +110,7 @@ export class App {
         event instanceof NavigationError
       ) {
         this.navigating.set(false);
+        this.currentUrl.set(this.router.url);
       }
     });
 

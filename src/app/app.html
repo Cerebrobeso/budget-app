@@ -61,16 +61,16 @@
       <a
         [routerLink]="link.path"
         routerLinkActive="!text-primary font-bold"
-        class="flex flex-col items-center gap-0.5 px-3 py-1 text-sm font-medium text-muted-foreground"
+        class="flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-1 text-xs font-medium text-muted-foreground"
       >
         <ng-icon [name]="link.icon" size="20" aria-hidden="true" />
-        {{ link.label }}
+        <span class="max-w-full truncate">{{ link.label }}</span>
       </a>
     }
   </nav>
 
   <!-- FAB mobile -->
-  @if (!categoryStore.isAdmin()) {
+  @if (showFab()) {
     <button
       hlmBtn
       size="icon"

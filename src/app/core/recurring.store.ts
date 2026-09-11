@@ -2,7 +2,7 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import type { User } from '@supabase/supabase-js';
 import { AuthService } from './auth.service';
 import { dateToIso, isoToDate } from './format';
-import { RecurringRule, todayIso, uid } from './models';
+import { RecurringRule, Transaction, todayIso, uid } from './models';
 import { BUDGET_REPOSITORY } from './repository';
 import { TransactionStore } from './transaction.store';
 import { reportWriteFailure } from './write-failure';
@@ -21,6 +21,28 @@ function isoAt(year: number, month1: number, day: number): string {
 function formatInstallmentDescription(base: string, index: number, total: number): string {
   const suffix = `${index}º rata di ${total}`;
   return base ? `${base} — ${suffix}` : suffix;
+}
+
+/** Distanza in mesi tra due date ISO (il giorno non conta): 0 se nello stesso mese. */
+function monthsBetween(fromIso: string, toIso: string): number {
+  const [fy, fm] = fromIso.split('-').map(Number);
+  const [ty, tm] = toIso.split('-').map(Number);
+  return (ty - fy) * 12 + (tm - fm);
+}
+
+/** Numero della rata che cade in `dateIso`, per un piano che parte da `startOccurrence` nel mese di `startDate`. */
+function installmentIndex(rule: RecurringRule, dateIso: string): number {
+  return rule.startOccurrence! + monthsBetween(rule.startDate, dateIso);
+}
+
+/** Stesso movimento della regola a meno della data: tipo, importo e categorie. */
+function matchesRule(tx: Transaction, rule: RecurringRule): boolean {
+  return (
+    tx.type === rule.type &&
+    tx.amount === rule.amount &&
+    tx.categoryId === rule.categoryId &&
+    tx.subcategoryId === rule.subcategoryId
+  );
 }
 
 /**
@@ -89,12 +111,22 @@ export class RecurringStore {
     return this.rules().find((r) => r.id === id);
   }
 
-  /** Progresso di un piano a rate: null se la regola è una ricorrenza senza fine. */
+  /**
+   * Progresso di un piano a rate: null se la regola è una ricorrenza senza fine.
+   * Il numero della rata si ricava dalla data dell'ultimo movimento, non da quanti sono:
+   * cancellandone uno a mano il conteggio tornerebbe indietro e la regola genererebbe una rata in più.
+   */
   installmentProgress(rule: RecurringRule): { index: number; total: number } | null {
     if (rule.startOccurrence == null || rule.totalOccurrences == null) return null;
+    const lastDate = this.lastGeneratedDate(rule);
+    const index = lastDate ? installmentIndex(rule, lastDate) : rule.startOccurrence;
+    return { index: Math.min(Math.max(index, rule.startOccurrence), rule.totalOccurrences), total: rule.totalOccurrences };
+  }
+
+  /** Data del movimento più recente generato da questa regola, null se non ne ha ancora. */
+  private lastGeneratedDate(rule: RecurringRule): string | null {
     const linked = this.txStore.transactions().filter((t) => t.recurringRuleId === rule.id);
-    const index = Math.min(rule.startOccurrence + Math.max(linked.length - 1, 0), rule.totalOccurrences);
-    return { index, total: rule.totalOccurrences };
+    return linked.length ? linked.reduce((m, t) => (t.date > m ? t.date : m), linked[0].date) : null;
   }
 
   add(rule: Omit<RecurringRule, 'id'>): void {
@@ -122,6 +154,8 @@ export class RecurringStore {
     this.repo.updateRecurringRule(id, patch).catch((err) =>
       reportWriteFailure(err, () => this.rules.update((list) => list.map((r) => (r.id === id ? current : r)))),
     );
+    // Cambiare data di partenza o giorno può scoprire mesi non ancora generati.
+    this.generateDue();
   }
 
   remove(id: string): void {
@@ -149,22 +183,29 @@ export class RecurringStore {
    * estremamente improbabile per un uso personale, e si autocorregge al giro successivo.
    */
   private generateDue(): void {
+    // Un caricamento fallito lascia la lista vuota: generare ora rifarebbe tutta la storia.
+    if (this.txStore.loadFailed()) return;
     const today = todayIso();
     for (const rule of this.active()) {
-      const linked = this.txStore.transactions().filter((t) => t.recurringRuleId === rule.id);
-      const lastDate = linked.length ? linked.reduce((m, t) => (t.date > m ? t.date : m), linked[0].date) : null;
-      let dates = duePeriods(rule, lastDate, today);
+      const lastDate = this.lastGeneratedDate(rule);
+      // Al massimo un movimento al mese per regola: il collegamento via recurringRuleId non basta,
+      // il movimento del mese può esserci senza (inserito a mano, importato, o da una regola
+      // ricreata). Confronto per "firma" (tipo/importo/categorie), non per id.
+      const coveredMonths = new Set(
+        this.txStore
+          .transactions()
+          .filter((t) => t.recurringRuleId === rule.id || matchesRule(t, rule))
+          .map((t) => t.date.slice(0, 7)),
+      );
+      const dates = duePeriods(rule, lastDate, today).filter((d) => !coveredMonths.has(d.slice(0, 7)));
 
       const isInstallment = rule.startOccurrence != null && rule.totalOccurrences != null;
-      // Numero di rate che questa regola deve generare in tutto (può iniziare a metà piano).
-      const neededCount = isInstallment ? rule.totalOccurrences! - rule.startOccurrence! + 1 : Infinity;
-      if (isInstallment) dates = dates.slice(0, Math.max(0, neededCount - linked.length));
-
-      let count = linked.length;
+      // La rata si ricava dal mese in cui cade, non da quante ne sono già state generate.
       for (const date of dates) {
-        count++;
+        const index = isInstallment ? installmentIndex(rule, date) : 0;
+        if (isInstallment && index > rule.totalOccurrences!) break;
         const description = isInstallment
-          ? formatInstallmentDescription(rule.description, rule.startOccurrence! + count - 1, rule.totalOccurrences!)
+          ? formatInstallmentDescription(rule.description, index, rule.totalOccurrences!)
           : rule.description;
         this.txStore.add({
           type: rule.type,
@@ -178,7 +219,8 @@ export class RecurringStore {
         });
       }
 
-      if (isInstallment && count >= neededCount) this.setArchived(rule.id, true);
+      const progress = this.installmentProgress(rule);
+      if (progress && progress.index >= progress.total) this.setArchived(rule.id, true);
     }
   }
 }

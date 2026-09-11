@@ -3,9 +3,9 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthService } from './auth.service';
 import type { AssetSnapshot, Category, RecurringRule, SubcategoryOverlay, Transaction } from './models';
-import { Asset, CATEGORY_ADMIN_UID } from './models';
+import { Asset, CATEGORY_ADMIN_UID, todayIso } from './models';
 import { BudgetRepository, BUDGET_REPOSITORY } from './repository';
-import { CategoryStore, latest, returnPct, TransactionStore } from './stores';
+import { CategoryStore, latest, RecurringStore, returnPct, TransactionStore } from './stores';
 
 function snap(date: string, value: number): AssetSnapshot {
   return { date, value };
@@ -55,11 +55,14 @@ describe('latest', () => {
 class FakeBudgetRepository implements BudgetRepository {
   categories: Category[] = [];
   overlays: SubcategoryOverlay[] = [];
+  transactions: Transaction[] = [];
+  failLoadTransactions = false;
+  recurringRules: RecurringRule[] = [];
   failNextWrite = false;
   failAddTransactionWhen: ((tx: Transaction) => boolean) | null = null;
 
   async loadTransactions(): Promise<Transaction[] | null> {
-    return [];
+    return this.failLoadTransactions ? null : this.transactions;
   }
   async queryTransactions(): Promise<Transaction[] | null> {
     return [];
@@ -97,7 +100,7 @@ class FakeBudgetRepository implements BudgetRepository {
   async removeAsset(): Promise<void> {}
 
   async loadRecurringRules(): Promise<RecurringRule[] | null> {
-    return [];
+    return this.recurringRules;
   }
   async addRecurringRule(): Promise<void> {}
   async updateRecurringRule(): Promise<void> {}
@@ -349,5 +352,142 @@ describe('TransactionStore.addMany', () => {
     expect(descriptions).toContain('Uno');
     expect(descriptions).toContain('Tre');
     expect(descriptions).not.toContain('Fallisce');
+  });
+});
+
+describe('RecurringStore.generateDue', () => {
+  const thisMonth = todayIso().slice(0, 7);
+
+  async function setup(repo: FakeBudgetRepository): Promise<TransactionStore> {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: BUDGET_REPOSITORY, useValue: repo },
+        { provide: AuthService, useValue: { user: signal({ id: 'u1' }), ready: signal(true) } },
+      ],
+    });
+    const txStore = TestBed.inject(TransactionStore);
+    TestBed.inject(RecurringStore);
+    await Promise.resolve();
+    TestBed.flushEffects();
+    await Promise.resolve();
+    TestBed.flushEffects();
+    return txStore;
+  }
+
+  const rule: RecurringRule = {
+    id: 'r1',
+    description: 'Affitto',
+    type: 'expense',
+    amount: 500,
+    categoryId: 'cat1',
+    subcategoryId: null,
+    dayOfMonth: 1,
+    startDate: `${thisMonth}-01`,
+  };
+
+  it('generates the missing transaction for the month', async () => {
+    const repo = new FakeBudgetRepository();
+    repo.recurringRules = [rule];
+
+    const txStore = await setup(repo);
+
+    expect(txStore.transactions().map((t) => t.date)).toEqual([`${thisMonth}-01`]);
+  });
+
+  it('skips the month when a matching transaction already exists, even without recurringRuleId', async () => {
+    const repo = new FakeBudgetRepository();
+    repo.recurringRules = [rule];
+    repo.transactions = [
+      { ...newTx({ date: `${thisMonth}-14`, type: 'expense', amount: 500, categoryId: 'cat1' }), id: 't1' },
+    ];
+
+    const txStore = await setup(repo);
+
+    expect(txStore.transactions().length).toBe(1);
+  });
+});
+
+describe('RecurringStore installment plans', () => {
+  /** Primo giorno del mese a `offset` mesi da oggi, in ISO. */
+  function monthIso(offset: number): string {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + offset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  }
+
+  const plan: RecurringRule = {
+    id: 'r-plan',
+    description: 'Prestito',
+    type: 'expense',
+    amount: 200,
+    categoryId: 'cat1',
+    subcategoryId: null,
+    dayOfMonth: 1,
+    startDate: monthIso(-2),
+    startOccurrence: 1,
+    totalOccurrences: 3,
+  };
+
+  async function run(repo: FakeBudgetRepository): Promise<TransactionStore> {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: BUDGET_REPOSITORY, useValue: repo },
+        { provide: AuthService, useValue: { user: signal({ id: 'u1' }), ready: signal(true) } },
+      ],
+    });
+    const txStore = TestBed.inject(TransactionStore);
+    TestBed.inject(RecurringStore);
+    await Promise.resolve();
+    TestBed.flushEffects();
+    await Promise.resolve();
+    TestBed.flushEffects();
+    return txStore;
+  }
+
+  it('numbers each instalment from the month it falls in', async () => {
+    const repo = new FakeBudgetRepository();
+    repo.recurringRules = [plan];
+
+    const txStore = await run(repo);
+
+    expect(txStore.transactions().map((t) => t.description)).toEqual([
+      'Prestito — 1º rata di 3',
+      'Prestito — 2º rata di 3',
+      'Prestito — 3º rata di 3',
+    ]);
+  });
+
+  it('keeps the numbering when an earlier instalment was deleted by hand', async () => {
+    const repo = new FakeBudgetRepository();
+    repo.recurringRules = [plan];
+    // Resta solo la 2ª rata: la 1ª è stata cancellata a mano.
+    repo.transactions = [
+      {
+        ...newTx({ date: monthIso(-1), type: 'expense', amount: 200, categoryId: 'cat1' }),
+        id: 't-2',
+        description: 'Prestito — 2º rata di 3',
+        recurringRuleId: plan.id,
+      },
+    ];
+
+    const txStore = await run(repo);
+
+    // Una sola rata nuova, numerata 3 (non 2, che sarebbe il conteggio dei movimenti collegati).
+    expect(txStore.transactions().map((t) => t.description)).toEqual([
+      'Prestito — 2º rata di 3',
+      'Prestito — 3º rata di 3',
+    ]);
+  });
+
+  it('does not generate anything when the transactions failed to load', async () => {
+    const repo = new FakeBudgetRepository();
+    repo.recurringRules = [plan];
+    repo.failLoadTransactions = true;
+
+    const txStore = await run(repo);
+
+    expect(txStore.loadFailed()).toBe(true);
+    expect(txStore.transactions()).toEqual([]);
   });
 });

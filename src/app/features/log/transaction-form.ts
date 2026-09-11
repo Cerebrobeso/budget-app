@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MaskitoDirective } from '@maskito/angular';
@@ -51,9 +52,10 @@ export class TransactionForm {
   readonly amountText = signal<string>('');
   readonly amount = computed<number | null>(() => parseAmountMask(this.amountText()));
   protected readonly amountMask = AMOUNT_MASK;
-  /** Nullo finché l'utente non sceglie Entrata/Uscita: gli input successivi restano disabilitati. */
-  readonly type = signal<TransactionType | null>(null);
-  readonly categoryId = signal<string>('spesa-quotidiana');
+  /** 'expense' di default: è il caso di gran lunga più frequente e risparmia un tap a ogni inserimento. */
+  readonly type = signal<TransactionType | null>('expense');
+  /** Vuoto all'avvio: la prima categoria disponibile la sceglie l'effect qui sotto, quando le categorie sono pronte. */
+  readonly categoryId = signal<string>('');
   readonly subcategoryId = signal<string | null>(null);
   readonly date = signal<string>(todayIso());
   readonly description = signal<string>('');
@@ -90,6 +92,15 @@ export class TransactionForm {
         this.date.set(tx.date);
         this.description.set(tx.description);
         this.tag.set(tx.tag);
+        return;
+      }
+      // Nuovo movimento: appena le categorie sono caricate, seleziona la prima del tipo scelto.
+      // `untracked` sulla lettura, altrimenti ogni cambio di categoria dell'utente rieseguirebbe l'effect.
+      const list = this.availableCategories();
+      const current = untracked(() => this.categoryId());
+      if (list.length && !list.some((c) => c.id === current)) {
+        this.categoryId.set(list[0].id);
+        this.subcategoryId.set(this.catStore.activeSubs(list[0].id)[0]?.id ?? null);
       }
     });
   }
@@ -138,9 +149,13 @@ export class TransactionForm {
       this.error.set('Inserisci una data.');
       return;
     }
+    const isTransfer = type === 'transfer';
+    if (!isTransfer && !this.categoryId()) {
+      this.error.set('Scegli una categoria.');
+      return;
+    }
     this.error.set('');
     const existing = this.transaction();
-    const isTransfer = type === 'transfer';
     const payload = {
       amount: Math.round(amount * 100) / 100,
       type,

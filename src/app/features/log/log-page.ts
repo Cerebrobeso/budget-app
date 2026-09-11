@@ -100,7 +100,9 @@ export class LogPage {
   /** Con una ricerca attiva si guarda in tutti i mesi, altrimenti solo in quello aperto. */
   readonly searching = computed(() => this.search().trim().length > 0);
 
-  readonly anyFilterActive = computed(() => this.filterCategory() !== '__all__' || this.filterTag() !== null);
+  readonly anyFilterActive = computed(
+    () => this.filterCategory() !== '__all__' || this.filterTag() !== null || this.searching(),
+  );
 
   /** La ricerca ora è una chiamata di rete, non un filter(): non può partire a ogni tasto premuto. */
   private readonly searchTerm = toSignal(
@@ -130,11 +132,21 @@ export class LogPage {
     loader: ({ params, abortSignal }) => this.txStore.queryTransactions(params.query, abortSignal),
   });
 
-  /** Trattiene l'ultimo risultato mentre la query dopo è in volo: cambiare mese non deve svuotare lista e totali. */
-  readonly filtered = linkedSignal<Transaction[] | null | undefined, Transaction[]>({
-    source: () => this.txQuery.value(),
-    computation: (value, previous) => value ?? previous?.value ?? [],
+  /**
+   * Trattiene l'ultimo risultato solo se la query è la stessa (refetch dopo una scrittura):
+   * così un salvataggio non fa sfarfallare la lista, ma cambiando mese o filtri i movimenti
+   * di prima spariscono subito invece di restare visibili finché non arriva la risposta.
+   */
+  readonly filtered = linkedSignal<{ rows: Transaction[] | null | undefined; key: string }, Transaction[]>({
+    source: () => ({ rows: this.txQuery.value(), key: JSON.stringify(this.query()) }),
+    computation: (source, previous) =>
+      source.rows ?? (previous && previous.source.key === source.key ? previous.value : []),
   });
+
+  protected readonly skeletonRows = [0, 1, 2];
+
+  /** Caricamento di una query nuova (mese/filtri cambiati): quello dopo una scrittura non svuota la lista. */
+  readonly loadingNewQuery = computed(() => this.txQuery.isLoading() && this.filtered().length === 0);
 
   /** Movimenti effettivamente mostrati in lista/export: `filtered` più il filtro per etichetta, se attivo. */
   readonly displayedItems = computed(() => {
@@ -143,11 +155,12 @@ export class LogPage {
     return tag ? items.filter((t) => t.tag === tag) : items;
   });
 
+  // Totali sui movimenti mostrati: con il filtro etichetta attivo devono coincidere con la lista.
   readonly totIncome = computed(() =>
-    this.filtered().filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+    this.displayedItems().filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
   );
   readonly totExpense = computed(() =>
-    this.filtered().filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+    this.displayedItems().filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
   );
   readonly balance = computed(() => this.totIncome() - this.totExpense());
 
@@ -224,6 +237,7 @@ export class LogPage {
     this.filterCategory.set('__all__');
     this.filterSub.set('__all__');
     this.filterTag.set(null);
+    this.search.set('');
   }
 
   /** Fa scorrere l'etichetta di un movimento (nessuna -> imprevisto -> programmata -> nessuna) senza passare dal form di modifica. */

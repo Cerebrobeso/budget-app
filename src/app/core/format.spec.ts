@@ -19,8 +19,8 @@ import {
 const NBSP = ' ';
 
 describe('eur', () => {
-  it('formats a positive amount as Italian-locale EUR (no thousands separator at exactly 4 integer digits, a documented Intl.NumberFormat/it-IT quirk)', () => {
-    expect(eur(1234.5)).toBe(`1234,50${NBSP}€`);
+  it('formats a positive amount as Italian-locale EUR, grouping thousands also at exactly 4 integer digits', () => {
+    expect(eur(1234.5)).toBe(`1.234,50${NBSP}€`);
   });
 
   it('formats zero', () => {
