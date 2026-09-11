@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.11.0](https://github.com/Cerebrobeso/budget-app/compare/v1.7.1...v1.11.0) (2026-09-11)
+
+### Features
+
+* **categories:** icona selezionabile per le categorie ([d7eee08](https://github.com/Cerebrobeso/budget-app/commit/d7eee0830940ddc1fb7d4ada32244c13b588fc3c))
+* implement category and portfolio management with new stores ([aa8e12f](https://github.com/Cerebrobeso/budget-app/commit/aa8e12fd75b5b6b4aea98293c124ad08f5171151))
+* **log:** add sticky month stamp for mobile view and implement intersection observer ([ecf8c8c](https://github.com/Cerebrobeso/budget-app/commit/ecf8c8cba4fd77adb85d7a6e70473bc0c33883b8))
+* **pwa:** rendi l'app installabile con service worker ([4e08cc8](https://github.com/Cerebrobeso/budget-app/commit/4e08cc8b31d134e9ea2e90dd19ec272118e7c6ac))
+* **recurring:** allow editing an existing recurring rule ([ad0a5d0](https://github.com/Cerebrobeso/budget-app/commit/ad0a5d04795ee8efc8993fef6135f1e47211d29c))
+
+### Bug Fixes
+
+* **dashboard:** distanzia la legenda dal grafico a torta ([488f465](https://github.com/Cerebrobeso/budget-app/commit/488f46517bead66ce2488c7e2aa5de99486bdf5f))
+* **mobile:** ottimizza touch target e safe area su iOS standalone ([d804aac](https://github.com/Cerebrobeso/budget-app/commit/d804aac47b808a5066600354aa8d51cb5310d396))
+* **recurring:** stop duplicate monthly transactions, plus audit fixes ([0dec9d0](https://github.com/Cerebrobeso/budget-app/commit/0dec9d083e3ba8864ff6024562c2ce13056c6306))
 ## [1.10.0](https://github.com/Cerebrobeso/budget-app/compare/v1.9.1...v1.10.0) (2026-08-21)
 
 ### Bug Fixes
