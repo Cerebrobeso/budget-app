@@ -11,6 +11,9 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MaskitoDirective } from '@maskito/angular';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronLeft, lucideChevronRight } from '@ng-icons/lucide';
+import { addDays } from 'date-fns';
 import { Transaction, TransactionTag, TransactionType, TRANSFER_CATEGORY_ID, todayIso } from '../../core/models';
 import { CategoryStore, TransactionStore } from '../../core/stores';
 import { AMOUNT_MASK, dateToIso, isoToDate, parseAmountMask, stringifyAmountMask } from '../../core/format';
@@ -20,6 +23,7 @@ import { HlmDatePickerImports } from '@spartan-ng/helm/date-picker';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmLabel } from '@spartan-ng/helm/label';
 import { HlmSelectImports } from '@spartan-ng/helm/select';
+import {HlmTextarea} from '@spartan-ng/helm/textarea';
 
 let formIdSeq = 0;
 
@@ -31,7 +35,8 @@ let formIdSeq = 0;
 @Component({
   selector: 'app-transaction-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, MaskitoDirective, CategorySwatchComponent, HlmButton, HlmInput, HlmLabel, ...HlmSelectImports, ...HlmDatePickerImports],
+  imports: [FormsModule, MaskitoDirective, CategorySwatchComponent, HlmButton, HlmInput, HlmLabel, NgIcon, ...HlmSelectImports, ...HlmDatePickerImports, HlmTextarea],
+  viewProviders: [provideIcons({ lucideChevronLeft, lucideChevronRight })],
   templateUrl: './transaction-form.html',
   styleUrl: './transaction-form.css',
 })
@@ -66,6 +71,10 @@ export class TransactionForm {
 
   onDateChange(value: Date | null): void {
     if (value) this.date.set(dateToIso(value));
+  }
+
+  shiftDate(days: number): void {
+    this.date.set(dateToIso(addDays(this.dateValue(), days)));
   }
 
   readonly availableCategories = computed(() => {

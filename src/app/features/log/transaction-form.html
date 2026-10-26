@@ -1,144 +1,162 @@
-<form [id]="formId" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 -mx-1" (submit)="$event.preventDefault(); save()">
-  <!-- Importo: il campo protagonista -->
-  <div>
-    <label hlmLabel for="tx-amount">Importo</label>
-    <div class="relative">
-      <input
-        hlmInput
-        id="tx-amount"
-        name="amount"
-        type="text"
-        inputmode="decimal"
-        [maskito]="amountMask"
-        required
-        autocomplete="off"
-        placeholder="0,00"
-        class="figure font-semibold pr-10 text-right"
-        [class.!text-income]="type() === 'income'"
-        [class.!text-expense]="type() === 'expense'"
-        [class.!text-primary]="type() === 'transfer'"
-        [ngModel]="amountText()"
-        (ngModelChange)="amountText.set($event)"
-        #amountInput
-      />
-      <span class="figure absolute right-3 top-1/2 -translate-y-1/2 text-base text-muted-foreground">€</span>
-    </div>
-  </div>
+<form (submit)="$event.preventDefault(); save()" [id]="formId"
+      class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 -mx-1">
+	<!-- Importo: il campo protagonista -->
+	<div>
+		<label for="tx-amount" hlmLabel>Importo</label>
+		<div class="relative">
+			<input
+							#amountInput
+							(ngModelChange)="amountText.set($event)"
+							[class.!text-expense]="type() === 'expense'"
+							[class.!text-income]="type() === 'income'"
+							[class.!text-primary]="type() === 'transfer'"
+							[maskito]="amountMask"
+							[ngModel]="amountText()"
+							autocomplete="off"
+							class="figure font-semibold pr-10 text-right"
+							hlmInput
+							id="tx-amount"
+							inputmode="decimal"
+							name="amount"
+							placeholder="0,00"
+							required
+              type="text"
+			/>
+			<span class="figure absolute right-3 top-1/2 -translate-y-1/2 text-base text-muted-foreground">€</span>
+		</div>
+	</div>
 
-  <!-- Tipo -->
-  <div class="grid grid-cols-3 gap-2" role="group" aria-label="Tipo di movimento">
-    <button
-      type="button"
-      hlmBtn
-      variant="outline"
-      [attr.aria-pressed]="type() === 'expense'"
-      [class]="type() === 'expense'
+	<!-- Tipo -->
+	<div aria-label="Tipo di movimento" class="grid grid-cols-3 gap-2" role="group">
+		<button
+						(click)="setType('expense')"
+						[attr.aria-pressed]="type() === 'expense'"
+						[class]="type() === 'expense'
         ? 'transition-all bg-expense hover:bg-expense text-white border-transparent hover:opacity-90 ring-2 ring-expense/50 ring-offset-2 ring-offset-background shadow-md shadow-expense/30'
         : 'transition-all opacity-60 hover:opacity-100'"
-      (click)="setType('expense')"
-    >
-      Uscita
-    </button>
-    <button
-      type="button"
-      hlmBtn
-      variant="outline"
-      [attr.aria-pressed]="type() === 'income'"
-      [class]="type() === 'income'
+						hlmBtn
+						type="button"
+						variant="outline"
+		>
+			Uscita
+		</button>
+		<button
+						(click)="setType('income')"
+						[attr.aria-pressed]="type() === 'income'"
+						[class]="type() === 'income'
         ? 'transition-all bg-income hover:bg-income text-white border-transparent hover:opacity-90 ring-2 ring-income/50 ring-offset-2 ring-offset-background shadow-md shadow-income/30'
         : 'transition-all opacity-60 hover:opacity-100'"
-      (click)="setType('income')"
-    >
-      Entrata
-    </button>
-    <button
-      type="button"
-      hlmBtn
-      variant="outline"
-      [attr.aria-pressed]="type() === 'transfer'"
-      [class]="type() === 'transfer'
+						hlmBtn
+						type="button"
+						variant="outline"
+		>
+			Entrata
+		</button>
+		<button
+						(click)="setType('transfer')"
+						[attr.aria-pressed]="type() === 'transfer'"
+						[class]="type() === 'transfer'
         ? 'transition-all bg-primary hover:bg-primary text-primary-foreground border-transparent hover:opacity-90 ring-2 ring-primary/50 ring-offset-2 ring-offset-background shadow-md shadow-primary/30 dark:bg-blue-600 dark:hover:bg-blue-600 dark:text-white dark:ring-blue-600/60 dark:shadow-blue-600/40'
         : 'transition-all opacity-60 hover:opacity-100'"
-      (click)="setType('transfer')"
-    >
-      Trasferimento
-    </button>
-  </div>
+						hlmBtn
+						type="button"
+						variant="outline"
+		>
+			Trasferimento
+		</button>
+	</div>
 
-  @if (type() === 'transfer') {
-    <p class="text-sm text-muted-foreground">
-      Spostamento tra tuoi conti: non conta come uscita/entrata nel bilancio del mese.
-      Ricordati di aggiornare a mano gli snapshot dei conti in Patrimonio.
-    </p>
-  } @else {
-    <!-- Categoria + sottocategoria -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div>
-        <label hlmLabel for="tx-category">Categoria</label>
-        <div hlmSelect [value]="categoryId()" (valueChange)="onCategoryChange($event)" [disabled]="type() === null" [itemToString]="categoryLabel">
-          <hlm-select-trigger buttonId="tx-category" class="w-full">
-            <span hlmSelectValue placeholder="Scegli categoria"></span>
-          </hlm-select-trigger>
-          <hlm-select-content *hlmSelectPortal>
-            @for (cat of availableCategories(); track cat.id) {
-              <hlm-select-item [value]="cat.id">
-                <app-category-swatch class="mr-2 inline-block" [color]="cat.color" [icon]="cat.icon ?? null" />
-                {{ cat.name }}
-              </hlm-select-item>
-            }
-          </hlm-select-content>
-        </div>
-      </div>
-      <div>
-        <label hlmLabel for="tx-subcategory">Sottocategoria</label>
-        <div hlmSelect [value]="subcategoryId()" (valueChange)="onSubChange($event)" [disabled]="type() === null || subs().length === 0" [itemToString]="subcategoryLabel">
-          <hlm-select-trigger buttonId="tx-subcategory" class="w-full">
-            <span hlmSelectValue placeholder="—"></span>
-          </hlm-select-trigger>
-          <hlm-select-content *hlmSelectPortal>
-            @for (sub of subs(); track sub.id) {
-              <hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
-            }
-          </hlm-select-content>
-        </div>
-      </div>
-    </div>
-  }
+	@if (type() === 'transfer') {
+		<p class="text-sm text-muted-foreground">
+			Spostamento tra tuoi conti: non conta come uscita/entrata nel bilancio del mese.
+			Ricordati di aggiornare a mano gli snapshot dei conti in Patrimonio.
+		</p>
+	} @else {
+		<!-- Categoria + sottocategoria -->
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+			<div>
+				<label for="tx-category" hlmLabel>Categoria</label>
+				<div (valueChange)="onCategoryChange($event)" [disabled]="type() === null" [itemToString]="categoryLabel" [value]="categoryId()"
+				     hlmSelect>
+					<hlm-select-trigger buttonId="tx-category" class="w-full">
+						<span hlmSelectValue placeholder="Scegli categoria"></span>
+					</hlm-select-trigger>
+					<hlm-select-content *hlmSelectPortal>
+						@for (cat of availableCategories(); track cat.id) {
+							<hlm-select-item [value]="cat.id">
+								<app-category-swatch [color]="cat.color" [icon]="cat.icon ?? null" class="mr-2 inline-block"/>
+								{{ cat.name }}
+							</hlm-select-item>
+						}
+					</hlm-select-content>
+				</div>
+			</div>
+			<div>
+				<label for="tx-subcategory" hlmLabel>Sottocategoria</label>
+				<div (valueChange)="onSubChange($event)" [disabled]="type() === null || subs().length === 0" [itemToString]="subcategoryLabel"
+				     [value]="subcategoryId()" hlmSelect>
+					<hlm-select-trigger buttonId="tx-subcategory" class="w-full">
+						<span hlmSelectValue placeholder="—"></span>
+					</hlm-select-trigger>
+					<hlm-select-content *hlmSelectPortal>
+						@for (sub of subs(); track sub.id) {
+							<hlm-select-item [value]="sub.id">{{ sub.name }}</hlm-select-item>
+						}
+					</hlm-select-content>
+				</div>
+			</div>
+		</div>
+	}
 
-  <!-- Data + descrizione -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-    <div>
-      <label hlmLabel for="tx-date">Data</label>
-      <hlm-date-picker class="w-full" [date]="dateValue()" [disabled]="type() === null" (dateChange)="onDateChange($event)">
-        <hlm-date-picker-trigger buttonId="tx-date" class="w-full" />
-      </hlm-date-picker>
-    </div>
-    <div>
-      <label hlmLabel for="tx-desc">Descrizione <span class="normal-case font-normal">(opzionale)</span></label>
-      <input hlmInput id="tx-desc" name="description" type="text" autocomplete="off"
-             placeholder="Es. Spesa, benzina…"
-             [disabled]="type() === null"
-             [ngModel]="description()" (ngModelChange)="description.set($event)" />
-    </div>
-  </div>
+	<!-- Data + descrizione -->
+	<div class="grid grid-cols-1 gap-3">
+		<div>
+			<label for="tx-date" hlmLabel>Data</label>
+			<div class="flex gap-2">
+				<button (click)="shiftDate(-1)" [disabled]="type() === null" aria-label="Giorno precedente" hlmBtn size="icon"
+								type="button" variant="outline">
+					<ng-icon name="lucideChevronLeft"/>
+				</button>
+				<hlm-date-picker (dateChange)="onDateChange($event)" [date]="dateValue()" [disabled]="type() === null"
+				                 class="min-w-0 flex-1">
+					<hlm-date-picker-trigger buttonId="tx-date" class="w-full justify-end"/>
+				</hlm-date-picker>
+				<button (click)="shiftDate(1)" [disabled]="type() === null" aria-label="Giorno successivo" hlmBtn size="icon"
+								type="button" variant="outline">
+					<ng-icon name="lucideChevronRight"/>
+				</button>
+			</div>
+		</div>
+		<div>
+			<label for="tx-desc" hlmLabel>Descrizione <span class="normal-case font-normal">(opzionale)</span></label>
+			<textarea (ngModelChange)="description.set($event)"
+								[disabled]="type() === null"
+								[ngModel]="description()"
+								hlmTextarea
+								id="tx-desc"
+								name="description"
+								placeholder="Es. Spesa, benzina…"
+			></textarea>
+		</div>
+	</div>
 
-  <!-- Movimento fuori dall'ordinario: imprevisto o grossa spesa programmata (mutuamente esclusivi) -->
-  <div class="flex flex-wrap gap-2" role="group" aria-label="Etichetta movimento">
-    <button type="button" hlmBtn size="sm" variant="outline" [disabled]="type() === null"
-            [attr.aria-pressed]="tag() === 'unexpected'"
-            [class]="tag() === 'unexpected' ? 'bg-expense hover:bg-expense text-white border-transparent' : ''"
-            (click)="setTag('unexpected')">
-      Imprevisto
-    </button>
-    <button type="button" hlmBtn size="sm" variant="outline" [disabled]="type() === null"
-            [attr.aria-pressed]="tag() === 'planned'"
-            [class]="tag() === 'planned' ? 'bg-primary hover:bg-primary text-primary-foreground border-transparent' : ''"
-            (click)="setTag('planned')">
-      Spesa programmata
-    </button>
-  </div>
+	<!-- Movimento fuori dall'ordinario: imprevisto o grossa spesa programmata (mutuamente esclusivi) -->
+	<div aria-label="Etichetta movimento" class="flex flex-wrap gap-2" role="group">
+		<button (click)="setTag('unexpected')" [attr.aria-pressed]="tag() === 'unexpected'" [class]="tag() === 'unexpected' ? 'bg-expense hover:bg-expense text-white border-transparent' : ''" [disabled]="type() === null" hlmBtn
+						size="sm"
+						type="button"
+						variant="outline">
+			Imprevisto
+		</button>
+		<button (click)="setTag('planned')" [attr.aria-pressed]="tag() === 'planned'" [class]="tag() === 'planned' ? 'bg-primary hover:bg-primary text-primary-foreground border-transparent' : ''" [disabled]="type() === null" hlmBtn
+						size="sm"
+						type="button"
+						variant="outline">
+			Spesa programmata
+		</button>
+	</div>
 
-  @if (error()) {
-    <p class="text-sm text-expense" role="alert">{{ error() }}</p>
-  }
+	@if (error()) {
+		<p class="text-sm text-expense" role="alert">{{ error() }}</p>
+	}
 </form>

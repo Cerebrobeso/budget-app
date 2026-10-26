@@ -2,6 +2,7 @@ import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideEchartsCore } from 'ngx-echarts';
+import { provideBrnCalendarI18n } from '@spartan-ng/brain/calendar';
 import { provideHlmDatePickerConfig } from '@spartan-ng/helm/date-picker';
 import { routes } from './app.routes';
 import { formatDateItalian, parseDateItalian } from './core/format';
@@ -14,6 +15,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideEchartsCore({ echarts: () => import('echarts') }),
     { provide: BUDGET_REPOSITORY, useClass: SupabaseBudgetRepository },
+    provideBrnCalendarI18n({ firstDayOfWeek: () => 1 }),
     provideHlmDatePickerConfig<Date>({
       formatDate: formatDateItalian,
       formatInputDate: formatDateItalian,
